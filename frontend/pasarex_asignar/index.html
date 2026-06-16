@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Asignación</title>
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body>
+    <nav>
+      <ul>
+        <li><a href="/">Pendientes</a></li>
+        <li><a href="/correo/">Correo</a></li>
+        <li><a href="/pasarex_asignar/" aria-current="page">Asignación</a></li>
+        <li><a href="/contabilidad/">Contabilidad</a></li>
+      </ul>
+    </nav>
+
+    <main class="container">
+      <header class="header">
+        <h1>Asignación</h1>
+        <p>Selecciona plataforma, credencial y guías para ejecutar la asignación.</p>
+      </header>
+
+      <section class="card">
+        <form id="pasarex-form">
+          <label class="field">
+            <span>Plataforma</span>
+            <select id="pasarex-mode" name="pasarex-mode">
+              <option value="proships">Proships</option>
+              <option value="imile">iMile</option>
+              <option value="pasarex" disabled>Pasarex</option>
+            </select>
+          </label>
+
+          <label class="field" id="pasarex-credential-field">
+            <span>Credenciales Pasarex</span>
+            <select id="pasarex-credenciales" name="pasarex-credenciales" ></select>
+          </label>
+
+          <label class="field" id="imile-credential-field" style="display:none;">
+            <span>Credenciales iMile</span>
+            <select id="imile-credenciales" name="imile-credenciales"></select>
+          </label>
+
+          <label class="field" id="proships-credential-field" style="display:none;">
+            <span>Credenciales Proships</span>
+            <select id="proships-credenciales" name="proships-credenciales"></select>
+          </label>
+
+          <label class="field">
+            <span>Guías</span>
+            <textarea id="pasarex-guias" name="pasarex-guias" placeholder="Una guía por línea" required></textarea>
+          </label>
+
+          <div class="actions">
+            <button type="submit" class="primary" id="pasarex-procesar">Procesar</button>
+          </div>
+
+          <div class="status">
+            <span class="status-label">Estado:</span>
+            <span id="pasarex-status-text">En espera</span>
+          </div>
+        </form>
+      </section>
+    </main>
+
+    <script src="../app.js"></script>
+  </body>
+</html>

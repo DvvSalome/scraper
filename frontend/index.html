@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pendientes por proveedor</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <nav class="main-nav">
+      <ul>
+        <li><a href="/" aria-current="page">Pendientes</a></li>
+        <li><a href="/correo/">Correo</a></li>
+        <li><a href="/pasarex_asignar/">Asignación</a></li>
+         <li><a href="/contabilidad/">Contabilidad</a></li>
+      </ul>
+    </nav>
+    <main class="container wide">
+      <header class="header">
+        <h1>Pendientes por proveedor</h1>
+        <p>Cada scraper se ejecuta en segundo plano para poder correr los tres al mismo tiempo.</p>
+      </header>
+        <section class="pending-grid">
+        <article class="card compact pending-card" data-provider="proships">
+          <h2>Proships</h2>
+          <form class="pending-form" data-provider="proships">
+            <label class="field">
+              <span>Paquetes</span>
+              <textarea class="pending-packages" placeholder="Ej: PCK123, PCK456" required></textarea>
+            </label>
+     
+            <label class="checkbox">
+            <input type="checkbox" class="pending-whatsapp" checked />
+            <span>Enviar mensajes por WhatsApp</span>
+            </label>
+                     <div class="actions">
+              <button type="submit" class="primary">Procesar</button>
+              <button type="button" class="secondary pending-download-csv">Descargar CSV</button>
+              <button type="button" class="secondary pending-download-xlsx">Descargar Excel</button>
+            </div>
+
+            <div class="status">
+              <span class="status-label">Estado:</span>
+              <span class="pending-status">En espera</span>
+            </div>
+
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>mensajero</th>
+                    <th>fecha</th>
+                    <th>pendientes</th>
+                  </tr>
+                </thead>
+                <tbody class="pending-results-body">
+                  <tr>
+                    <td colspan="10" class="empty">Sin resultados aún.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </form>
+        </article>
+
+        <article class="card compact pending-card" data-provider="x-cargo">
+          <h2>X Cargo</h2>
+          <form class="pending-form" data-provider="x-cargo">
+            <label class="field">
+              <span>Paquetes</span>
+              <textarea class="pending-packages" placeholder="Ej: XCG123, XCG456" required></textarea>
+            </label>
+
+            <label class="checkbox">
+              <input type="checkbox" class="pending-whatsapp" checked />
+              <span>Enviar mensajes por WhatsApp</span>
+            </label>
+
+            <div class="actions">
+              <button type="submit" class="primary">Procesar</button>
+              <button type="button" class="secondary pending-download-csv">Descargar CSV</button>
+              <button type="button" class="secondary pending-download-xlsx">Descargar Excel</button>
+            </div>
+
+            <div class="status">
+              <span class="status-label">Estado:</span>
+              <span class="pending-status">En espera</span>
+            </div>
+
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>mensajero</th>
+                    <th>fecha</th>
+                    <th>pendientes</th>
+                  </tr>
+                </thead>
+                <tbody class="pending-results-body">
+                  <tr>
+                    <td colspan="3" class="empty">Sin resultados aún.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </form>
+        </article>
+
+        <article class="card compact pending-card" data-provider="imile">
+          <h2>iMile</h2>
+          <form class="pending-form" data-provider="imile">
+            <label class="field">
+              <span>Paquetes</span>
+              <textarea class="pending-packages" placeholder="Ej: IM123, IM456" required></textarea>
+            </label>
+
+            <label class="checkbox">
+              <input type="checkbox" class="pending-whatsapp" checked />
+              <span>Enviar mensajes por WhatsApp</span>
+            </label>
+
+            <div class="actions">
+              <button type="submit" class="primary">Procesar</button>
+              <button type="button" class="secondary pending-download-csv">Descargar CSV</button>
+              <button type="button" class="secondary pending-download-xlsx">Descargar Excel</button>
+            </div>
+
+            <div class="status">
+              <span class="status-label">Estado:</span>
+              <span class="pending-status">En espera</span>
+            </div>
+
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>mensajero</th>
+                    <th>fecha</th>
+                    <th>pendientes</th>
+                  </tr>
+                </thead>
+                <tbody class="pending-results-body">
+                  <tr>
+                    <td colspan="3" class="empty">Sin resultados aún.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </form>
+        </article>
+
+        <article class="card compact pending-card" data-provider="pasarex">
+          <h2>Pasarex</h2>
+          <form class="pending-form" data-provider="pasarex">
+            <label class="field">
+              <span>Paquetes</span>
+              <textarea class="pending-packages" placeholder="Ej: PAS123, PAS456" required disabled></textarea>
+            </label>
+
+            <label class="checkbox">
+              <input type="checkbox" class="pending-whatsapp" disabled checked />
+              <span>Enviar mensajes por WhatsApp</span>
+            </label>
+
+            <div class="actions">
+              <button type="submit" class="primary" disabled>Procesar</button>
+              <button type="button" class="secondary pending-download-csv" disabled>Descargar CSV</button>
+              <button type="button" class="secondary pending-download-xlsx" disabled>Descargar Excel</button>
+            </div>
+
+            <div class="status">
+              <span class="status-label">Estado:</span>
+              <span class="pending-status">En espera</span>
+            </div>
+
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>mensajero</th>
+                    <th>fecha</th>
+                    <th>pendientes</th>
+                  </tr>
+                </thead>
+                <tbody class="pending-results-body">
+                  <tr>
+                    <td colspan="3" class="empty">Sin resultados aún.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </form>
+        </article>
+      </section> 
+
+
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html> 

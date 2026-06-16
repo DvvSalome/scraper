@@ -1,0 +1,1455 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Scraper Timex · Documentación técnica</title>
+<style>
+  /* ============ TEMA ============ */
+  :root{
+    --bg:#f6f7fb; --bg2:#eef1f8; --surface:#ffffff; --surface2:#f8fafc;
+    --ink:#1f2937; --ink-soft:#475569; --muted:#64748b; --line:#e2e8f0;
+    --brand:#2563eb; --brand-ink:#1d4ed8; --brand-soft:#dbeafe;
+    --green:#059669; --green-soft:#d1fae5; --amber:#d97706; --amber-soft:#fef3c7;
+    --red:#dc2626; --red-soft:#fee2e2; --violet:#7c3aed; --violet-soft:#ede9fe;
+    --cyan:#0891b2; --cyan-soft:#cffafe; --pink:#db2777; --pink-soft:#fce7f3;
+    --shadow:0 1px 2px rgba(15,23,42,.06),0 8px 24px rgba(15,23,42,.06);
+    --shadow-lg:0 12px 40px rgba(15,23,42,.12);
+    --radius:16px; --mono:"SFMono-Regular",ui-monospace,"JetBrains Mono","Fira Code",Consolas,monospace;
+    --sans:"Inter","Segoe UI",system-ui,-apple-system,sans-serif;
+  }
+  html[data-theme="dark"]{
+    --bg:#0b1020; --bg2:#0e1428; --surface:#121a30; --surface2:#0f1729;
+    --ink:#e6edf7; --ink-soft:#b6c2d6; --muted:#8595ad; --line:#22304d;
+    --brand:#60a5fa; --brand-ink:#93c5fd; --brand-soft:#173056;
+    --green:#34d399; --green-soft:#0c3b30; --amber:#fbbf24; --amber-soft:#3a2c08;
+    --red:#f87171; --red-soft:#3a1414; --violet:#a78bfa; --violet-soft:#241544;
+    --cyan:#22d3ee; --cyan-soft:#08323b; --pink:#f472b6; --pink-soft:#3a1228;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.45);
+    --shadow-lg:0 16px 50px rgba(0,0,0,.6);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; font-family:var(--sans); background:var(--bg); color:var(--ink);
+    line-height:1.6; -webkit-font-smoothing:antialiased; overflow-x:hidden;
+    transition:background .4s ease,color .4s ease;
+  }
+  a{color:var(--brand-ink);text-decoration:none}
+  a:hover{text-decoration:underline}
+  code{font-family:var(--mono);font-size:.86em;background:var(--bg2);
+    border:1px solid var(--line);padding:.08em .42em;border-radius:6px;color:var(--brand-ink)}
+  h1,h2,h3,h4{line-height:1.25;letter-spacing:-.01em}
+  ::selection{background:var(--brand);color:#fff}
+
+  /* scroll progress bar */
+  #progress{position:fixed;top:0;left:0;height:3px;width:0;z-index:200;
+    background:linear-gradient(90deg,var(--brand),var(--violet),var(--cyan));
+    box-shadow:0 0 12px var(--brand);transition:width .08s linear}
+
+  /* ============ HERO ============ */
+  .hero{position:relative;padding:96px 24px 72px;overflow:hidden;text-align:center;
+    background:linear-gradient(125deg,#1e3a8a,#2563eb 35%,#7c3aed 70%,#0891b2);
+    background-size:300% 300%;animation:flow 18s ease infinite;color:#fff}
+  @keyframes flow{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+  .hero::after{content:"";position:absolute;inset:0;
+    background:radial-gradient(900px 380px at 50% -10%,rgba(255,255,255,.22),transparent 60%);
+    pointer-events:none}
+  .hero .badge-pill{display:inline-flex;gap:8px;align-items:center;
+    background:rgba(255,255,255,.16);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.25);
+    padding:7px 16px;border-radius:999px;font-size:.8rem;font-weight:600;letter-spacing:.03em;
+    text-transform:uppercase;animation:rise .8s .05s both}
+  .hero h1{font-size:clamp(2.3rem,6vw,4.1rem);margin:22px 0 10px;font-weight:800;
+    text-shadow:0 2px 30px rgba(0,0,0,.25);animation:rise .8s .12s both}
+  .hero p{font-size:clamp(1rem,2.2vw,1.28rem);max-width:760px;margin:0 auto;
+    color:rgba(255,255,255,.92);animation:rise .8s .2s both}
+  .hero .meta{margin-top:30px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;
+    animation:rise .8s .28s both}
+  .hero .meta span{background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.2);
+    padding:8px 15px;border-radius:10px;font-size:.84rem;font-family:var(--mono)}
+  @keyframes rise{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+  .scroll-cue{margin-top:46px;animation:rise .8s .36s both}
+  .scroll-cue .mouse{width:26px;height:42px;border:2px solid rgba(255,255,255,.7);border-radius:14px;
+    margin:0 auto;position:relative}
+  .scroll-cue .mouse::after{content:"";position:absolute;left:50%;top:8px;width:4px;height:8px;
+    background:#fff;border-radius:2px;transform:translateX(-50%);animation:wheel 1.5s infinite}
+  @keyframes wheel{0%{opacity:1;top:8px}100%{opacity:0;top:20px}}
+
+  /* ============ LAYOUT ============ */
+  .shell{max-width:1180px;margin:0 auto;padding:0 24px;
+    display:grid;grid-template-columns:230px 1fr;gap:48px;align-items:start}
+  @media(max-width:940px){.shell{grid-template-columns:1fr;gap:0}}
+  /* TOC */
+  .toc{position:sticky;top:24px;align-self:start;padding:24px 0;font-size:.9rem}
+  @media(max-width:940px){.toc{display:none}}
+  .toc h4{font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin:18px 0 10px}
+  .toc a{display:block;color:var(--ink-soft);padding:6px 12px;border-left:2px solid var(--line);
+    border-radius:0 6px 6px 0;transition:.2s}
+  .toc a:hover{background:var(--bg2);text-decoration:none;color:var(--ink)}
+  .toc a.active{border-left-color:var(--brand);color:var(--brand-ink);background:var(--brand-soft);font-weight:600}
+
+  main{padding:64px 0 120px;min-width:0}
+  section{margin:0 0 84px;scroll-margin-top:24px}
+  .eyebrow{display:inline-block;font-size:.74rem;font-weight:700;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--brand);background:var(--brand-soft);
+    padding:5px 12px;border-radius:999px;margin-bottom:14px}
+  h2.sec{font-size:clamp(1.6rem,3.4vw,2.2rem);margin:0 0 8px;font-weight:800}
+  .lead{color:var(--ink-soft);font-size:1.06rem;max-width:780px;margin:0 0 28px}
+
+  /* reveal */
+  .reveal{opacity:0;transform:translateY(28px);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}
+  .reveal.visible{opacity:1;transform:none}
+  .reveal.d1{transition-delay:.08s}.reveal.d2{transition-delay:.16s}
+  .reveal.d3{transition-delay:.24s}.reveal.d4{transition-delay:.32s}
+
+  /* cards */
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:26px;box-shadow:var(--shadow);transition:transform .3s,box-shadow .3s,border-color .3s}
+  .card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg);border-color:var(--brand)}
+  .grid{display:grid;gap:18px}
+  .g2{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(3,1fr)}
+  .g4{grid-template-columns:repeat(4,1fr)}
+  @media(max-width:820px){.g2,.g3,.g4{grid-template-columns:1fr}}
+  .card .ic{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;
+    font-size:1.4rem;margin-bottom:14px;background:var(--brand-soft)}
+  .card h3{margin:0 0 6px;font-size:1.12rem}
+  .card p{margin:0;color:var(--ink-soft);font-size:.94rem}
+  .tag{display:inline-block;font-size:.7rem;font-weight:700;padding:3px 9px;border-radius:6px;
+    margin:2px 4px 2px 0;font-family:var(--mono)}
+  .t-blue{background:var(--brand-soft);color:var(--brand-ink)}
+  .t-green{background:var(--green-soft);color:var(--green)}
+  .t-amber{background:var(--amber-soft);color:var(--amber)}
+  .t-red{background:var(--red-soft);color:var(--red)}
+  .t-violet{background:var(--violet-soft);color:var(--violet)}
+  .t-cyan{background:var(--cyan-soft);color:var(--cyan)}
+  .t-pink{background:var(--pink-soft);color:var(--pink)}
+
+  /* stat row */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+  @media(max-width:820px){.stats{grid-template-columns:repeat(2,1fr)}}
+  .stat{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px;text-align:center;box-shadow:var(--shadow)}
+  .stat .n{font-size:2rem;font-weight:800;color:var(--brand-ink);font-variant-numeric:tabular-nums}
+  .stat .l{font-size:.82rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+
+  /* ============ ARQUITECTURA SVG ============ */
+  .arch{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:28px;box-shadow:var(--shadow);overflow-x:auto}
+  .arch svg{display:block;margin:0 auto;min-width:720px;width:100%;max-width:1000px}
+  .node-box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+  .node-label{fill:var(--ink);font-family:var(--sans);font-weight:700;font-size:15px}
+  .node-sub{fill:var(--muted);font-family:var(--mono);font-size:11px}
+  .flowline{fill:none;stroke:var(--brand);stroke-width:2.4;stroke-dasharray:7 7;
+    animation:dash 1s linear infinite}
+  .flowline.v{stroke:var(--violet)}.flowline.c{stroke:var(--cyan)}.flowline.g{stroke:var(--green)}
+  @keyframes dash{to{stroke-dashoffset:-28}}
+  .pulse{animation:pulse 2.4s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+
+  /* ============ TABS / FLUJOS ============ */
+  .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px}
+  .tab{cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);
+    padding:11px 18px;border-radius:11px;font-weight:700;font-size:.92rem;transition:.25s;display:flex;gap:8px;align-items:center}
+  .tab:hover{border-color:var(--brand);color:var(--ink)}
+  .tab.active{background:var(--brand);border-color:var(--brand);color:#fff;box-shadow:0 8px 20px -8px var(--brand)}
+  .panel{display:none;animation:fade .45s ease}
+  .panel.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+
+  /* steps timeline */
+  .steps{position:relative;margin:8px 0 0;padding-left:8px}
+  .step{position:relative;padding:0 0 6px 56px;margin-bottom:6px}
+  .step::before{content:"";position:absolute;left:19px;top:34px;bottom:-6px;width:2px;background:var(--line)}
+  .step:last-child::before{display:none}
+  .step .dot{position:absolute;left:0;top:0;width:40px;height:40px;border-radius:50%;
+    background:var(--brand);color:#fff;display:grid;place-items:center;font-weight:800;
+    box-shadow:0 0 0 5px var(--brand-soft);font-size:.95rem}
+  .step .body{background:var(--surface);border:1px solid var(--line);border-radius:13px;
+    padding:15px 18px;box-shadow:var(--shadow)}
+  .step .body h4{margin:0 0 4px;font-size:1.02rem}
+  .step .body p{margin:0;color:var(--ink-soft);font-size:.93rem}
+  .step .body .where{font-family:var(--mono);font-size:.78rem;color:var(--muted);margin-top:6px;display:block}
+
+  /* tables */
+  .tw{overflow-x:auto;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+  table.data{border-collapse:collapse;width:100%;min-width:560px;background:var(--surface);font-size:.9rem}
+  table.data th,table.data td{text-align:left;padding:12px 15px;border-bottom:1px solid var(--line);vertical-align:top}
+  table.data thead th{background:var(--bg2);font-size:.74rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  table.data tbody tr:hover{background:var(--surface2)}
+  table.data tr:last-child td{border-bottom:none}
+  table.data td code{white-space:nowrap}
+
+  /* callouts */
+  .note{border-radius:13px;padding:16px 18px 16px 20px;margin:16px 0;border-left:4px solid;font-size:.93rem;display:flex;gap:12px}
+  .note .ni{font-size:1.2rem;line-height:1.4}
+  .note.info{background:var(--brand-soft);border-color:var(--brand)}
+  .note.warn{background:var(--amber-soft);border-color:var(--amber)}
+  .note.danger{background:var(--red-soft);border-color:var(--red)}
+  .note.ok{background:var(--green-soft);border-color:var(--green)}
+  .note b{color:var(--ink)}
+
+  /* code block */
+  pre{background:#0d1424;color:#e6edf7;border-radius:13px;padding:18px 20px;overflow-x:auto;
+    font-family:var(--mono);font-size:.84rem;line-height:1.6;border:1px solid #1e293b;box-shadow:var(--shadow)}
+  pre .c{color:#7d8aa3}.pre .k{color:#93c5fd}
+  pre .s{color:#86efac}.pre .v{color:#fbbf24}
+  html[data-theme="dark"] pre{background:#070b16}
+
+  /* details */
+  details.acc{background:var(--surface);border:1px solid var(--line);border-radius:13px;margin:12px 0;
+    box-shadow:var(--shadow);overflow:hidden}
+  details.acc summary{cursor:pointer;padding:16px 20px;font-weight:700;list-style:none;display:flex;
+    justify-content:space-between;align-items:center;gap:10px}
+  details.acc summary::-webkit-details-marker{display:none}
+  details.acc summary .chev{transition:.3s;color:var(--muted)}
+  details.acc[open] summary .chev{transform:rotate(90deg)}
+  details.acc .inner{padding:0 20px 18px;color:var(--ink-soft);font-size:.93rem}
+  details.acc.danger{border-color:var(--red)}
+  details.acc.danger summary{color:var(--red)}
+
+  ul.clean{margin:8px 0;padding-left:20px}ul.clean li{margin:6px 0;color:var(--ink-soft)}
+  ul.clean li b{color:var(--ink)}
+  .kbd{font-family:var(--mono);background:var(--bg2);border:1px solid var(--line);border-bottom-width:2px;
+    border-radius:6px;padding:2px 7px;font-size:.8rem}
+
+  /* theme toggle */
+  .toggle{position:fixed;right:20px;bottom:20px;z-index:150;width:52px;height:52px;border-radius:50%;
+    border:1px solid var(--line);background:var(--surface);box-shadow:var(--shadow-lg);cursor:pointer;
+    font-size:1.4rem;display:grid;place-items:center;transition:transform .3s}
+  .toggle:hover{transform:scale(1.1) rotate(15deg)}
+
+  footer{border-top:1px solid var(--line);padding:40px 24px;text-align:center;color:var(--muted);font-size:.9rem}
+  .legend{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;margin:14px 0 0;font-size:.82rem;color:var(--muted)}
+  .legend span{display:inline-flex;gap:6px;align-items:center}
+  .swatch{width:22px;height:4px;border-radius:2px;display:inline-block}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<button class="toggle" id="themeBtn" title="Cambiar tema">🌙</button>
+
+<!-- HERO -->
+<header class="hero">
+  <span class="badge-pill">⚙️ Documentación técnica · v1.5</span>
+  <h1>Scraper Timex</h1>
+  <p>Plataforma de automatización logística: extrae estados de guías de 4 transportadoras, las cruza con PackTrack y dispara mensajes a mensajeros por WhatsApp y Telegram — todo desde una UI web.</p>
+  <div class="meta">
+    <span>server.py · stdlib HTTP</span>
+    <span>Selenium + Scrapy</span>
+    <span>:8002</span>
+    <span>~7.900 LOC</span>
+  </div>
+  <div class="scroll-cue"><div class="mouse"></div></div>
+</header>
+
+<div class="shell">
+  <!-- TOC -->
+  <nav class="toc" id="toc">
+    <h4>Contenido</h4>
+    <a href="#resumen">Resumen</a>
+    <a href="#stack">Stack tecnológico</a>
+    <a href="#arquitectura">Arquitectura</a>
+    <a href="#modulos">Mapa de módulos</a>
+    <a href="#integraciones">Cómo funcionan las integraciones</a>
+    <a href="#nueva-integracion">Agregar nuevo proveedor</a>
+    <a href="#packtrack">El cruce PackTrack</a>
+    <a href="#flujos">Flujos de trabajo</a>
+    <a href="#whatsapp">WhatsApp & Telegram</a>
+    <a href="#api">API HTTP</a>
+    <a href="#datos">Esquema de datos</a>
+    <a href="#config">Configuración</a>
+    <a href="#ejecutar">Cómo ejecutar</a>
+    <a href="#verdad">Verdad sin maquillaje</a>
+    <a href="#mejoras">Mejoras propuestas</a>
+  </nav>
+
+  <main>
+    <!-- RESUMEN -->
+    <section id="resumen">
+      <span class="eyebrow reveal">Qué es</span>
+      <h2 class="sec reveal">El problema que resuelve</h2>
+      <p class="lead reveal">Una operación de mensajería trabaja con varias transportadoras (Proships, X-Cargo, iMile, Pasarex). Cada una tiene su propio portal. El equipo necesita saber, por mensajero, <b>qué paquetes siguen pendientes</b>, generar reportes contables y avisar a cada repartidor. Scraper Timex centraliza eso: una página, cuatro herramientas, sin tocar Excel a mano.</p>
+
+      <div class="stats reveal d1">
+        <div class="stat"><div class="n" data-count="4">0</div><div class="l">Transportadoras</div></div>
+        <div class="stat"><div class="n" data-count="4">0</div><div class="l">Herramientas UI</div></div>
+        <div class="stat"><div class="n" data-count="11">0</div><div class="l">Endpoints HTTP</div></div>
+        <div class="stat"><div class="n" data-count="2">0</div><div class="l">Canales de aviso</div></div>
+      </div>
+
+      <div class="note info reveal d2" style="margin-top:24px">
+        <span class="ni">💡</span>
+        <div>Pese al nombre <i>"spider"</i> en los archivos, casi todo es <b>automatización de navegador con Selenium</b> (Chrome real, no headless). Solo X-Cargo usa Scrapy + Playwright de verdad. No hay base de datos: el estado vive en memoria del proceso y en archivos <code>.csv</code>/<code>.xlsx</code> dentro de cada carpeta.</div>
+      </div>
+    </section>
+
+    <!-- STACK -->
+    <section id="stack">
+      <span class="eyebrow reveal">Tecnología</span>
+      <h2 class="sec reveal">Stack tecnológico</h2>
+      <p class="lead reveal">Sin frameworks pesados. El servidor es la librería estándar de Python; cada scraper es un script independiente que se lanza como subproceso.</p>
+      <div class="grid g3">
+        <div class="card reveal"><div class="ic">🐍</div><h3>Backend</h3><p>Python 3, <code>http.server.ThreadingHTTPServer</code>. Cero dependencias web. Sirve los estáticos de <code>frontend/</code> y expone JSON.</p><div style="margin-top:10px"><span class="tag t-blue">stdlib</span><span class="tag t-blue">subprocess</span><span class="tag t-blue">threading</span></div></div>
+        <div class="card reveal d1"><div class="ic" style="background:var(--green-soft)">🕷️</div><h3>Scraping</h3><p>Selenium + Chrome para 3 proveedores y la asignación. <code>chromedriver-autoinstaller</code> gestiona el driver. X-Cargo usa Scrapy + scrapy-playwright.</p><div style="margin-top:10px"><span class="tag t-green">Selenium</span><span class="tag t-green">Scrapy</span><span class="tag t-green">Playwright</span></div></div>
+        <div class="card reveal d2"><div class="ic" style="background:var(--violet-soft)">🎨</div><h3>Frontend</h3><p>HTML + CSS + JavaScript vanilla. Sin build, sin npm. <code>fetch()</code> contra el propio servidor y <i>polling</i> para procesos largos.</p><div style="margin-top:10px"><span class="tag t-violet">Vanilla JS</span><span class="tag t-violet">fetch</span></div></div>
+        <div class="card reveal"><div class="ic" style="background:var(--amber-soft)">📊</div><h3>Archivos</h3><p><code>openpyxl</code> escribe el Excel de Novedades SAC; <code>pandas</code> lee guías en la asignación de Proships; <code>csv</code> para todos los <code>resultados.csv</code>.</p><div style="margin-top:10px"><span class="tag t-amber">openpyxl</span><span class="tag t-amber">pandas</span><span class="tag t-amber">csv</span></div></div>
+        <div class="card reveal d1"><div class="ic" style="background:var(--cyan-soft)">💬</div><h3>Mensajería</h3><p>No usa APIs oficiales. Maneja <b>WhatsApp Web</b> y <b>Telegram Web</b> con Selenium, usando perfiles de Chrome persistentes (QR la primera vez).</p><div style="margin-top:10px"><span class="tag t-cyan">WhatsApp Web</span><span class="tag t-cyan">Telegram Web</span></div></div>
+        <div class="card reveal d2"><div class="ic" style="background:var(--red-soft)">🐳</div><h3>Empaque</h3><p><code>Dockerfile</code> con Python 3.11 + Chromium. Por defecto arranca en <b>modo simulado</b> (sin <code>RUN_SPIDERS</code>) y le faltan algunas dependencias para scraping real.</p><div style="margin-top:10px"><span class="tag t-red">Docker</span><span class="tag t-red">chromium</span></div></div>
+      </div>
+    </section>
+
+    <!-- ARQUITECTURA -->
+    <section id="arquitectura">
+      <span class="eyebrow reveal">Cómo encaja todo</span>
+      <h2 class="sec reveal">Arquitectura de alto nivel</h2>
+      <p class="lead reveal">El navegador habla solo con <code>server.py</code>. El servidor escribe la lista de guías en un archivo, lanza el scraper correcto como proceso hijo y lee de vuelta su <code>resultados.csv</code>. El scraper, por su cuenta, abre Chrome y navega los portales reales.</p>
+
+      <div class="arch reveal d1">
+        <svg viewBox="0 0 960 430" role="img" aria-label="Diagrama de arquitectura">
+          <!-- columnas -->
+          <!-- Navegador -->
+          <rect class="node-box" x="20" y="150" width="170" height="110" rx="14"/>
+          <text class="node-label" x="105" y="195" text-anchor="middle">🖥️ Navegador</text>
+          <text class="node-sub" x="105" y="218" text-anchor="middle">UI estática</text>
+          <text class="node-sub" x="105" y="234" text-anchor="middle">app.js · fetch/poll</text>
+
+          <!-- server.py -->
+          <rect class="node-box" x="300" y="120" width="190" height="170" rx="14" style="stroke:var(--brand);stroke-width:2.5"/>
+          <text class="node-label" x="395" y="160" text-anchor="middle">⚙️ server.py</text>
+          <text class="node-sub" x="395" y="182" text-anchor="middle">ThreadingHTTPServer</text>
+          <text class="node-sub" x="395" y="198" text-anchor="middle">:8002</text>
+          <text class="node-sub" x="395" y="222" text-anchor="middle">sirve frontend/</text>
+          <text class="node-sub" x="395" y="238" text-anchor="middle">+ API JSON</text>
+          <text class="node-sub" x="395" y="262" text-anchor="middle" style="fill:var(--brand)">RUN_SPIDERS = 0|1</text>
+
+          <!-- subprocess -->
+          <rect class="node-box" x="600" y="40" width="190" height="120" rx="14" style="stroke:var(--green);stroke-width:2"/>
+          <text class="node-label" x="695" y="78" text-anchor="middle">🕷️ Scraper hijo</text>
+          <text class="node-sub" x="695" y="100" text-anchor="middle">subprocess + Chrome</text>
+          <text class="node-sub" x="695" y="116" text-anchor="middle">Selenium / Scrapy</text>
+          <text class="node-sub" x="695" y="138" text-anchor="middle">lee paquetes.txt</text>
+
+          <!-- sitios -->
+          <rect class="node-box" x="600" y="285" width="190" height="115" rx="14" style="stroke:var(--violet);stroke-width:2"/>
+          <text class="node-label" x="695" y="320" text-anchor="middle">🌐 Portales</text>
+          <text class="node-sub" x="695" y="342" text-anchor="middle">proships · bigsmart</text>
+          <text class="node-sub" x="695" y="358" text-anchor="middle">imile · pasarex</text>
+          <text class="node-sub" x="695" y="380" text-anchor="middle">+ PackTrack</text>
+
+          <!-- salidas -->
+          <rect class="node-box" x="850" y="150" width="92" height="120" rx="12" style="stroke:var(--amber)"/>
+          <text class="node-sub" x="896" y="190" text-anchor="middle" style="font-size:12px;fill:var(--ink)">📄 CSV</text>
+          <text class="node-sub" x="896" y="212" text-anchor="middle" style="font-size:12px;fill:var(--ink)">📘 XLSX</text>
+          <text class="node-sub" x="896" y="234" text-anchor="middle" style="font-size:12px;fill:var(--ink)">💬 WA/TG</text>
+
+          <!-- conexiones -->
+          <path class="flowline" d="M190 205 H300"/>
+          <path class="flowline g" d="M490 175 C 540 130, 560 100, 600 100"/>
+          <path class="flowline v" d="M695 160 V285"/>
+          <path class="flowline" d="M790 100 C 840 120, 850 150, 858 165" />
+          <circle class="pulse" cx="395" cy="120" r="5" fill="var(--brand)"/>
+          <circle class="pulse" cx="695" cy="40" r="5" fill="var(--green)"/>
+        </svg>
+        <div class="legend">
+          <span><i class="swatch" style="background:var(--brand)"></i> HTTP / JSON</span>
+          <span><i class="swatch" style="background:var(--green)"></i> lanza proceso</span>
+          <span><i class="swatch" style="background:var(--violet)"></i> navega web real</span>
+          <span><i class="swatch" style="background:var(--amber)"></i> produce archivos</span>
+        </div>
+      </div>
+
+      <div class="note warn reveal d2">
+        <span class="ni">⚠️</span>
+        <div><b>Estado en memoria.</b> Los diccionarios <code>SCRAPER_STATES</code> y <code>PASAREX_ASSIGN_STATE</code> viven dentro del proceso del servidor. Si reinicias <code>server.py</code>, se pierde el estado de ejecución (no los CSV, que quedan en disco). No hay cola ni persistencia real.</div>
+      </div>
+    </section>
+
+    <!-- MODULOS -->
+    <section id="modulos">
+      <span class="eyebrow reveal">Estructura</span>
+      <h2 class="sec reveal">Mapa de módulos</h2>
+      <p class="lead reveal">Cada carpeta es autocontenida: su script, su <code>paquetes.txt</code> de entrada y su <code>resultados.csv</code> de salida.</p>
+      <div class="grid g2">
+        <div class="card reveal"><div class="ic">📁</div><h3>proships/</h3><p><code>proships_spider_with_whatsapp_v2.py</code> — Selenium contra <code>tracking.proships.com</code> + PackTrack. Trae timeline, contacto y mensajero. Subcarpeta <code>asignar_proships/</code> sube un Excel al backend de MailAmericas.</p></div>
+        <div class="card reveal d1"><div class="ic" style="background:var(--green-soft)">📁</div><h3>x-cargo/</h3><p><code>cargo_spider_updated_v4.py</code> — el único con Scrapy. Playwright loguea en <code>admin.bigsmart.mx</code>, Scrapy raspa PackTrack, Selenium envía WhatsApp.</p></div>
+        <div class="card reveal d2"><div class="ic" style="background:var(--violet-soft)">📁</div><h3>imile/</h3><p><code>imile_spider.py</code> — Selenium contra el portal SPA <code>ds.imile.com</code> (navegación por hash, manejo de overlays). <code>asignar_imile.py</code> es un <b>stub</b> de 56 líneas.</p></div>
+        <div class="card reveal"><div class="ic" style="background:var(--amber-soft)">📁</div><h3>pasarex/ · pasarex_asignar/</h3><p>Spider Selenium para <code>proveedores.pasarex.com</code> (deshabilitado en la UI) y un asignador real con 24 credenciales, reCAPTCHA NopeCHA y transmisión a SimpliRoute.</p></div>
+        <div class="card reveal d1"><div class="ic" style="background:var(--cyan-soft)">📁</div><h3>contabilidad/</h3><p>Dos versiones: <code>contabilidad_spider.py</code> (simple) y <code>..._con_telegram_v3.py</code>. Loguean en PackTrack, clasifican paquetes plus/normal por municipio y calculan dinero por mensajero.</p></div>
+        <div class="card reveal d2"><div class="ic" style="background:var(--pink-soft)">📁</div><h3>proships_correo/</h3><p><code>proships_spider.py</code> — raspa Proships y rellena la plantilla <code>FORMATO DE NOVEDADES SAC.xlsx</code> con openpyxl, respetando estilos.</p></div>
+        <div class="card reveal"><div class="ic">📁</div><h3>frontend/</h3><p><code>index.html</code> (pendientes) + subpáginas <code>correo/</code>, <code>contabilidad/</code>, <code>pasarex_asignar/</code>. JS vanilla, un <code>styles.css</code> compartido.</p></div>
+        <div class="card reveal d1"><div class="ic" style="background:var(--brand-soft)">📄</div><h3>server.py</h3><p>El orquestador. Enruta peticiones, escribe entradas, lanza subprocesos, vigila con hilos y parsea credenciales de los scripts con <code>ast</code>.</p></div>
+      </div>
+    </section>
+
+    <!-- INTEGRACIONES -->
+    <section id="integraciones">
+      <span class="eyebrow reveal">Anatomía</span>
+      <h2 class="sec reveal">Cómo funcionan las integraciones</h2>
+      <p class="lead reveal">Cada proveedor es un <b>script Python autocontenido</b> que cumple un contrato simple: leer una lista de guías, scrapear, y escribir un CSV. El servidor solo sabe arrancar el proceso y leer su salida. Nada más.</p>
+
+      <!-- CONTRATO -->
+      <h3 class="reveal" style="font-size:1.1rem;margin:0 0 14px">El contrato de cada integración</h3>
+      <div class="grid g3 reveal d1" style="margin-bottom:28px">
+        <div class="card" style="border-top:3px solid var(--brand)">
+          <div class="ic" style="background:var(--brand-soft)">📥</div>
+          <h3>Entrada</h3>
+          <p>Archivo <code>paquetes.txt</code> en la carpeta del proveedor. Una guía por línea. El servidor lo escribe antes de lanzar el proceso.</p>
+          <pre style="margin-top:10px;font-size:.8rem">PCK001
+PCK002
+PCK003</pre>
+        </div>
+        <div class="card" style="border-top:3px solid var(--green)">
+          <div class="ic" style="background:var(--green-soft)">📤</div>
+          <h3>Salida obligatoria</h3>
+          <p>Archivo <code>resultados.csv</code> en la misma carpeta. Exactamente <b>10 columnas</b>, en este orden, con cabecera:</p>
+          <pre style="margin-top:10px;font-size:.75rem">tracking,status,fecha,tracking,
+cliente_direccion,cliente_nombre,
+cliente_numero,municipio,
+mensajero,estado</pre>
+        </div>
+        <div class="card" style="border-top:3px solid var(--violet)">
+          <div class="ic" style="background:var(--violet-soft)">📤</div>
+          <h3>Salida opcional</h3>
+          <p><code>mensajes_whatsapp.csv</code> si <code>SEND_WHATSAPP=1</code>. Columnas: <code>mensajero, celular, mensaje</code>. El script lo envía él mismo vía WhatsApp Web.</p>
+          <p style="margin-top:8px">El servidor <b>no</b> lo procesa — el script se encarga de todo.</p>
+        </div>
+      </div>
+
+      <!-- CICLO DE VIDA -->
+      <h3 class="reveal" style="font-size:1.1rem;margin:0 0 14px">Ciclo de vida de una ejecución</h3>
+      <div class="arch reveal d1" style="margin-bottom:28px">
+        <svg viewBox="0 0 900 130" role="img">
+          <defs>
+            <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="var(--brand)"/>
+            </marker>
+          </defs>
+          <!-- boxes -->
+          <rect class="node-box" x="10" y="30" width="130" height="60" rx="10"/>
+          <text class="node-label" x="75" y="58" text-anchor="middle" font-size="12">UI / fetch</text>
+          <text class="node-sub" x="75" y="76" text-anchor="middle">POST .../start</text>
+
+          <rect class="node-box" x="175" y="30" width="150" height="60" rx="10" style="stroke:var(--brand)"/>
+          <text class="node-label" x="250" y="52" text-anchor="middle" font-size="12">server.py</text>
+          <text class="node-sub" x="250" y="68" text-anchor="middle">escribe paquetes.txt</text>
+          <text class="node-sub" x="250" y="82" text-anchor="middle">Popen(script)</text>
+
+          <rect class="node-box" x="360" y="30" width="160" height="60" rx="10" style="stroke:var(--green)"/>
+          <text class="node-label" x="440" y="52" text-anchor="middle" font-size="12">Spider script</text>
+          <text class="node-sub" x="440" y="68" text-anchor="middle">Chrome → proveedor</text>
+          <text class="node-sub" x="440" y="82" text-anchor="middle">Chrome → PackTrack</text>
+
+          <rect class="node-box" x="555" y="30" width="130" height="60" rx="10" style="stroke:var(--amber)"/>
+          <text class="node-label" x="620" y="58" text-anchor="middle" font-size="12">resultados.csv</text>
+          <text class="node-sub" x="620" y="76" text-anchor="middle">en carpeta proveedor</text>
+
+          <rect class="node-box" x="720" y="30" width="165" height="60" rx="10" style="stroke:var(--violet)"/>
+          <text class="node-label" x="802" y="52" text-anchor="middle" font-size="12">Watcher thread</text>
+          <text class="node-sub" x="802" y="68" text-anchor="middle">lee CSV → STATES</text>
+          <text class="node-sub" x="802" y="82" text-anchor="middle">UI hace poll</text>
+
+          <!-- arrows -->
+          <line x1="140" y1="60" x2="173" y2="60" stroke="var(--brand)" stroke-width="2" marker-end="url(#arr)"/>
+          <line x1="325" y1="60" x2="358" y2="60" stroke="var(--brand)" stroke-width="2" marker-end="url(#arr)"/>
+          <line x1="520" y1="60" x2="553" y2="60" stroke="var(--green)" stroke-width="2" marker-end="url(#arr)"/>
+          <line x1="685" y1="60" x2="718" y2="60" stroke="var(--amber)" stroke-width="2" marker-end="url(#arr)"/>
+        </svg>
+      </div>
+
+      <!-- IMILE COMO EJEMPLO -->
+      <h3 class="reveal" style="font-size:1.1rem;margin:0 0 14px">iMile como ejemplo concreto</h3>
+      <div class="note info reveal d1"><span class="ni">🎯</span><div>iMile es el proveedor más reciente y bien estructurado. Úsalo como referencia para entender cómo funciona cualquier integración.</div></div>
+
+      <div class="tabs reveal d2" style="margin-top:16px">
+        <div class="tab active" data-tab="im1">① Registro en server.py</div>
+        <div class="tab" data-tab="im2">② Login</div>
+        <div class="tab" data-tab="im3">③ Scraping por guía</div>
+        <div class="tab" data-tab="im4">④ Cruce PackTrack</div>
+        <div class="tab" data-tab="im5">⑤ Salida CSV</div>
+      </div>
+
+      <div class="panel active" id="im1">
+        <p style="color:var(--ink-soft);margin:0 0 12px">El servidor conoce iMile porque está registrado en dos diccionarios al arrancar. Eso es todo lo que necesita saber el servidor.</p>
+        <pre><span class="c"># server.py — SCRAPER_CONFIG</span>
+SCRAPER_CONFIG = {
+    "proships": {"workdir": PROSHIPS_DIR, "script": "proships_spider_with_whatsapp_v2.py"},
+    "x-cargo":  {"workdir": XCARGO_DIR,   "script": "cargo_spider_updated_v4.py"},
+    "pasarex":  {"workdir": PASAREX_DIR,  "script": "spider_pasarex.py"},
+    "imile":    {"workdir": IMILE_DIR,    "script": "imile_spider.py"},  <span class="c"># &lt;-- iMile</span>
+}
+
+<span class="c"># SCRAPER_STATES se genera automáticamente a partir de esas claves</span>
+SCRAPER_STATES = {
+    key: {"provider": key, "running": False, "status": "En espera", ...}
+    for key in SCRAPER_CONFIG
+}</pre>
+        <div class="note ok"><span class="ni">✅</span><div>El servidor no tiene lógica específica de iMile. Solo sabe la carpeta y el nombre del script. Todo lo demás lo maneja el script.</div></div>
+      </div>
+
+      <div class="panel" id="im2">
+        <p style="color:var(--ink-soft);margin:0 0 12px">El spider de iMile hace dos logins en pestañas separadas del mismo Chrome.</p>
+        <pre><span class="c"># imile/imile_spider.py — main()</span>
+
+<span class="c"># 1. Leer guías</span>
+codes = [l.strip() for l in Path("paquetes.txt").read_text().splitlines() if l.strip()]
+
+<span class="c"># 2. Abrir Chrome (HEADLESS=False — visible)</span>
+driver = build_driver(headless=False)
+
+<span class="c"># 3. Login iMile (pestaña 1)</span>
+driver.get("https://ds-login.imile.com/")
+driver.find_element(By.CSS_SELECTOR, "input[name='userCode']").send_keys(IMILE_EMAIL)
+driver.find_element(By.CSS_SELECTOR, "input[name='password']").send_keys(IMILE_PASSWORD)
+driver.find_element(By.CSS_SELECTOR, "button.ImileButton-root").click()
+# espera hasta que URL empiece con https://ds.imile.com
+
+<span class="c"># 4. Login PackTrack (pestaña 2)</span>
+driver.switch_to.new_window('tab')
+login_paquetes(driver)  <span class="c"># → packtrack.site/users/sign_in</span>
+driver.switch_to.window(handle_imile)</pre>
+      </div>
+
+      <div class="panel" id="im3">
+        <p style="color:var(--ink-soft);margin:0 0 12px">Para cada guía: navega la SPA de iMile, espera que cargue, extrae los campos.</p>
+        <pre><span class="c"># Para la primera guía: navegar por URL directa</span>
+driver.get(f"https://ds.imile.com/#/DSOperation/WaybillManagement/dsTrackQuery?waybillNo={code}")
+WebDriverWait(driver, 30).until(EC.presence_of_element_located(
+    (By.CSS_SELECTOR, ".search-header input")
+))
+
+<span class="c"># Para las siguientes: reusar la caja de búsqueda (más rápido)</span>
+search = driver.find_element(By.CSS_SELECTOR, ".search-header input")
+search.send_keys(Keys.CONTROL + "a")
+search.send_keys(Keys.BACKSPACE)
+search.send_keys(code)
+search.send_keys(Keys.ENTER)
+_wait_for_no_loading(driver)
+
+<span class="c"># Extraer datos del DOM (selectores posicionales)</span>
+data = {
+    "status":           driver.find_element(By.CSS_SELECTOR, ".status.active").text,
+    "cliente_nombre":   driver.find_element(By.CSS_SELECTOR, ".detail-item:nth-child(1) div.value").text,
+    "cliente_numero":   driver.find_element(By.CSS_SELECTOR, ".detail-item:nth-child(3) div.value").text,
+    "cliente_direccion":driver.find_element(By.CSS_SELECTOR, ".detail-item:nth-child(6) div.value").text,
+}</pre>
+        <div class="note warn"><span class="ni">⚠️</span><div>Los selectores <code>:nth-child(N)</code> son frágiles. Si iMile cambia el orden de sus campos, la extracción falla silenciosamente (devuelve string vacío gracias al <code>_safe_text</code> wrapper).</div></div>
+      </div>
+
+      <div class="panel" id="im4">
+        <p style="color:var(--ink-soft);margin:0 0 12px">Tras extraer datos del portal iMile, switch al tab de PackTrack para enriquecer con mensajero, fecha y celular.</p>
+        <pre><span class="c"># Cambiar al tab de PackTrack</span>
+driver.switch_to.window(handle_packtrack)
+
+<span class="c"># GET /paquetes?codigo=GUIA</span>
+driver.get(f"https://packtrack.site/paquetes?codigo={urllib.parse.quote(code)}")
+WebDriverWait(driver, 25).until(EC.presence_of_element_located((By.TAG_NAME, "table")))
+
+<span class="c"># Buscar la fila por número de guía y extraer por nombre de cabecera</span>
+headers = {th.text.strip().lower(): i for i, th in enumerate(driver.find_elements(By.CSS_SELECTOR, "table thead th"))}
+for row in driver.find_elements(By.CSS_SELECTOR, "table tbody tr"):
+    cells = row.find_elements(By.TAG_NAME, "td")
+    if cells[0].text.strip() == code:
+        mensajero_idx = next((headers[k] for k in ["mensajero","courier","driver"] if k in headers), 4)
+        data["mensajero"] = cells[mensajero_idx].text.strip()
+        data["fecha"]     = cells[headers.get("fecha", 1)].text.strip()
+        data["estado"]    = cells[headers.get("estado", 2)].text.strip() or "SIN ESTADO"
+
+<span class="c"># Lookup celular del mensajero</span>
+driver.get(f"https://packtrack.site/mensajeros?query={urllib.parse.quote(data['mensajero'])}")
+<span class="c"># ... leer columna "celular" de la primera fila</span>
+
+<span class="c"># Volver al tab de iMile</span>
+driver.switch_to.window(handle_imile)</pre>
+      </div>
+
+      <div class="panel" id="im5">
+        <p style="color:var(--ink-soft);margin:0 0 12px">Después del loop, escribe el CSV en la carpeta del proveedor. El servidor lo lee al terminar el proceso.</p>
+        <pre><span class="c"># imile/resultados.csv — 10 columnas exactas</span>
+with open("resultados.csv", "w", newline="", encoding="utf-8") as f:
+    writer = csv.writer(f)
+    writer.writerow([
+        "tracking","status","fecha","tracking_2",
+        "cliente_direccion","cliente_nombre","cliente_numero",
+        "municipio","mensajero","estado"
+    ])
+    for r in results:
+        writer.writerow([
+            r["tracking"],
+            r["status"],
+            r["fecha"],
+            r["tracking"],          <span class="c"># col 4: tracking duplicado</span>
+            r["cliente_direccion"],
+            r["cliente_nombre"],
+            f'="{r["cliente_numero"]}"',  <span class="c"># como texto para evitar que Excel lo corte</span>
+            r.get("municipio", ""),  <span class="c"># casi siempre vacío</span>
+            r["mensajero"],
+            r["estado"],
+        ])</pre>
+        <div class="note info"><span class="ni">📌</span><div>iMile escribe los campos <code>tracking</code>, <code>tracking_2</code> y <code>cliente_numero</code> como fórmulas Excel (<code>="valor"</code>) para que no se pierdan ceros o se conviertan a número. Los otros spiders los escriben como texto plano.</div></div>
+      </div>
+    </section>
+
+    <!-- NUEVA INTEGRACION -->
+    <section id="nueva-integracion">
+      <span class="eyebrow reveal">Guía práctica</span>
+      <h2 class="sec reveal">Cómo agregar un nuevo proveedor</h2>
+      <p class="lead reveal">Son 4 pasos: script, registro en el servidor, tarjeta en la UI, y verificar el contrato de salida. Tiempo estimado: <b>1–2 días</b> dependiendo de complejidad del portal.</p>
+
+      <div class="steps">
+        <!-- PASO 1 -->
+        <div class="step reveal">
+          <div class="dot" style="background:var(--green)">1</div>
+          <div class="body">
+            <h4>Crear la carpeta y el script del spider</h4>
+            <p>Copia la estructura de iMile como plantilla — es la más limpia. Renombra y adapta.</p>
+            <span class="where">nuevo_proveedor/nuevo_spider.py · nuevo_proveedor/paquetes.txt (vacío por ahora)</span>
+            <pre style="margin-top:12px"><span class="c"># Estructura mínima del script</span>
+import os, csv, time
+from pathlib import Path
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+import chromedriver_autoinstaller
+
+<span class="c"># Credenciales desde env (nunca hardcodeadas)</span>
+EMAIL    = os.getenv("NUEVO_EMAIL", "")
+PASSWORD = os.getenv("NUEVO_PASSWORD", "")
+BASE_URL = "https://portal.nuevo-proveedor.com"
+
+def build_driver():
+    chromedriver_autoinstaller.install()
+    opts = webdriver.ChromeOptions()
+    opts.add_argument("--no-sandbox")
+    opts.add_argument("--disable-dev-shm-usage")
+    opts.add_argument("--disable-blink-features=AutomationControlled")
+    <span class="c"># headless solo si NO necesitas QR/captcha</span>
+    return webdriver.Chrome(options=opts)
+
+def login(driver):
+    driver.get(f"{BASE_URL}/login")
+    WebDriverWait(driver, 30).until(
+        EC.presence_of_element_located((By.CSS_SELECTOR, "input[name='email']"))
+    )
+    driver.find_element(By.CSS_SELECTOR, "input[name='email']").send_keys(EMAIL)
+    driver.find_element(By.CSS_SELECTOR, "input[name='password']").send_keys(PASSWORD)
+    driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
+    WebDriverWait(driver, 30).until(lambda d: "/login" not in d.current_url)
+    print("✅ Login OK")
+
+def scrape_guia(driver, guia):
+    <span class="c"># Adaptar a la UI del proveedor</span>
+    driver.get(f"{BASE_URL}/tracking?q={guia}")
+    <span class="c"># ... extraer campos ...</span>
+    return {
+        "tracking": guia,
+        "status": "",        <span class="c"># checkpoint del proveedor</span>
+        "fecha": "",         <span class="c"># del PackTrack</span>
+        "cliente_direccion": "",
+        "cliente_nombre": "",
+        "cliente_numero": "",
+        "municipio": "",
+        "mensajero": "",     <span class="c"># del PackTrack</span>
+        "estado": "",        <span class="c"># del PackTrack</span>
+    }
+
+def main():
+    codes = [l.strip() for l in Path("paquetes.txt").read_text(encoding="utf-8").splitlines() if l.strip()]
+    if not codes:
+        print("⚠️ paquetes.txt vacío")
+        return
+
+    driver = build_driver()
+    results = []
+    try:
+        login(driver)
+        for i, code in enumerate(codes, 1):
+            print(f"=========== [{i}/{len(codes)}] {code} ===========")
+            data = scrape_guia(driver, code)
+            results.append(data)
+            time.sleep(1.0)
+    finally:
+        driver.quit()
+
+    <span class="c"># OBLIGATORIO: escribir resultados.csv con exactamente estas 10 columnas</span>
+    with open("resultados.csv", "w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["tracking","status","fecha","tracking",
+                    "cliente_direccion","cliente_nombre","cliente_numero",
+                    "municipio","mensajero","estado"])
+        for r in results:
+            w.writerow([r["tracking"], r["status"], r["fecha"], r["tracking"],
+                        r["cliente_direccion"], r["cliente_nombre"], r["cliente_numero"],
+                        r["municipio"], r["mensajero"], r["estado"]])
+    print("📁 Listo: resultados.csv generado.")
+
+if __name__ == "__main__":
+    main()</pre>
+          </div>
+        </div>
+
+        <!-- PASO 2 -->
+        <div class="step reveal d1">
+          <div class="dot" style="background:var(--brand)">2</div>
+          <div class="body">
+            <h4>Registrar en server.py (2 líneas)</h4>
+            <p>Agregar la carpeta y el script al diccionario <code>SCRAPER_CONFIG</code>. El estado se genera solo.</p>
+            <span class="where">server.py · línea ~32</span>
+            <pre style="margin-top:12px"><span class="c"># Agregar ruta de la nueva carpeta</span>
+NUEVO_DIR = BASE_DIR / "nuevo_proveedor"
+
+<span class="c"># Agregar al diccionario SCRAPER_CONFIG</span>
+SCRAPER_CONFIG = {
+    "proships": {...},
+    "x-cargo":  {...},
+    "pasarex":  {...},
+    "imile":    {...},
+    "nuevo":    {"workdir": NUEVO_DIR, "script": "nuevo_spider.py"},  <span class="c"># &lt;-- agregar</span>
+}
+
+<span class="c"># SCRAPER_STATES se genera automáticamente — no hay que tocarlo</span></pre>
+            <div class="note ok" style="margin-top:10px"><span class="ni">✅</span><div>Con esto ya funcionan los endpoints <code>/api/pending/nuevo/start</code>, <code>/status</code> y <code>/download.csv</code>. El servidor no necesita nada más.</div></div>
+          </div>
+        </div>
+
+        <!-- PASO 3 -->
+        <div class="step reveal d2">
+          <div class="dot" style="background:var(--violet)">3</div>
+          <div class="body">
+            <h4>Agregar la tarjeta en el frontend</h4>
+            <p>Copiar una tarjeta existente (ej. iMile) y cambiar el <code>data-provider</code> y el <code>h2</code>. El JS la recoge automáticamente con <code>querySelectorAll(".pending-card")</code>.</p>
+            <span class="where">frontend/index.html</span>
+            <pre style="margin-top:12px">&lt;article class="card compact pending-card" data-provider="nuevo"&gt;
+  &lt;h2&gt;Nuevo Proveedor&lt;/h2&gt;
+  &lt;form class="pending-form" data-provider="nuevo"&gt;
+    &lt;label class="field"&gt;
+      &lt;span&gt;Paquetes&lt;/span&gt;
+      &lt;textarea class="pending-packages" placeholder="Ej: NVO123" required&gt;&lt;/textarea&gt;
+    &lt;/label&gt;
+    &lt;label class="checkbox"&gt;
+      &lt;input type="checkbox" class="pending-whatsapp" /&gt;
+      &lt;span&gt;Enviar mensajes por WhatsApp&lt;/span&gt;
+    &lt;/label&gt;
+    &lt;div class="actions"&gt;
+      &lt;button type="submit" class="primary"&gt;Procesar&lt;/button&gt;
+      &lt;button type="button" class="secondary pending-download-csv"&gt;Descargar CSV&lt;/button&gt;
+      &lt;button type="button" class="secondary pending-download-xlsx"&gt;Descargar Excel&lt;/button&gt;
+    &lt;/div&gt;
+    &lt;div class="status"&gt;&lt;span class="status-label"&gt;Estado:&lt;/span&gt;
+      &lt;span class="pending-status"&gt;En espera&lt;/span&gt;&lt;/div&gt;
+    &lt;div class="table-wrapper"&gt;
+      &lt;table&gt;
+        &lt;thead&gt;&lt;tr&gt;&lt;th&gt;mensajero&lt;/th&gt;&lt;th&gt;fecha&lt;/th&gt;&lt;th&gt;pendientes&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;
+        &lt;tbody class="pending-results-body"&gt;&lt;/tbody&gt;
+      &lt;/table&gt;
+    &lt;/div&gt;
+  &lt;/form&gt;
+&lt;/article&gt;</pre>
+          </div>
+        </div>
+
+        <!-- PASO 4 -->
+        <div class="step reveal">
+          <div class="dot" style="background:var(--amber)">4</div>
+          <div class="body">
+            <h4>Probar el contrato de salida</h4>
+            <p>Antes de conectar con la UI, verificar el script a mano con un <code>paquetes.txt</code> real y revisar el CSV resultante.</p>
+            <span class="where">Terminal — desde la carpeta del proveedor</span>
+            <pre style="margin-top:12px"><span class="c"># Escribir guías de prueba</span>
+echo -e "GUIA001\nGUIA002\nGUIA003" > nuevo_proveedor/paquetes.txt
+
+<span class="c"># Ejecutar el spider directamente (con display disponible)</span>
+cd nuevo_proveedor
+NUEVO_EMAIL=usuario@empresa.com NUEVO_PASSWORD=clave python3 nuevo_spider.py
+
+<span class="c"># Verificar el CSV</span>
+head -3 resultados.csv
+<span class="c"># Debe tener cabecera con 10 columnas y una fila por guía</span></pre>
+            <div class="note warn" style="margin-top:10px"><span class="ni">⚠️</span><div>Si el CSV tiene menos de 10 columnas o el orden es distinto, el servidor va a leer los campos en posiciones incorrectas. La cabecera es cosmética — el servidor lee <b>por posición</b>, no por nombre.</div></div>
+          </div>
+        </div>
+
+        <!-- PASO 5 — OPCIONAL -->
+        <div class="step reveal d1">
+          <div class="dot" style="background:var(--cyan)">+</div>
+          <div class="body">
+            <h4>(Opcional) Agregar cruce PackTrack</h4>
+            <p>Si el proveedor no da el mensajero ni el celular, agregar el cruce estándar. Son tres funciones ya escritas que se pueden copiar de cualquier spider existente.</p>
+            <span class="where">Copiar de imile/imile_spider.py</span>
+            <pre style="margin-top:12px"><span class="c"># Funciones a copiar tal cual:</span>
+login_paquetes(driver)            <span class="c"># login en packtrack.site</span>
+paquetes_buscar_y_extraer(driver, guia)  <span class="c"># → {fecha, mensajero, estado}</span>
+mensajero_buscar_celular(driver, nombre) <span class="c"># → celular normalizado</span>
+
+<span class="c"># En tu main(), abrir segunda pestaña:</span>
+handle_nuevo    = driver.current_window_handle
+driver.switch_to.new_window('tab')
+login_paquetes(driver)
+handle_packtrack = driver.current_window_handle
+
+<span class="c"># Por cada guía, alternar pestañas:</span>
+driver.switch_to.window(handle_nuevo)
+data = scrape_guia(driver, code)
+
+driver.switch_to.window(handle_packtrack)
+pt = paquetes_buscar_y_extraer(driver, code)
+data.update(pt)  <span class="c"># sobrescribe fecha, mensajero, estado</span>
+
+driver.switch_to.window(handle_nuevo)</pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- CHECKLIST -->
+      <div class="card reveal d2" style="margin-top:28px;border-left:4px solid var(--green)">
+        <h3 style="margin:0 0 16px">✅ Checklist antes de dar por terminada la integración</h3>
+        <div class="grid g2">
+          <ul class="clean">
+            <li><b>Sin credenciales en código:</b> solo <code>os.getenv()</code> sin valor por defecto hardcodeado.</li>
+            <li><b>CSV con 10 columnas</b> en el orden correcto (verifica con <code>head -1 resultados.csv | tr , '\n' | nl</code>).</li>
+            <li><b>Script termina con exit 0</b> si todo fue bien, exit ≠ 0 si hubo error — el servidor lo usa para detectar éxito/fallo.</li>
+            <li><b>Sin <code>input()</code> bloqueante</b> en el flujo principal — el servidor no tiene stdin para el proceso hijo.</li>
+          </ul>
+          <ul class="clean">
+            <li><b>Lee <code>paquetes.txt</code> desde <code>Path("paquetes.txt")</code></b> (relativo al CWD que setea el servidor).</li>
+            <li><b>Escribe <code>resultados.csv</code></b> en el mismo directorio.</li>
+            <li><b>Probado con <code>RUN_SPIDERS=0</code></b>: la UI muestra la tarjeta, el status cambia, los botones de descarga responden.</li>
+            <li><b>Probado con <code>RUN_SPIDERS=1</code></b> con al menos 3 guías reales.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- PACKTRACK -->
+    <section id="packtrack">
+      <span class="eyebrow reveal">El patrón central</span>
+      <h2 class="sec reveal">El cruce con PackTrack</h2>
+      <p class="lead reveal">Esta es la idea que se repite en casi todos los spiders y conviene entenderla una sola vez. Ningún portal de transportadora sabe <i>qué mensajero local</i> lleva el paquete ni su celular. Eso vive en <b>PackTrack</b> (una app Rails en <code>packtrack.site</code>). Por eso cada spider abre <b>dos sesiones a la vez</b>.</p>
+
+      <div class="grid g3">
+        <div class="card reveal"><div class="ic" style="background:var(--violet-soft)">①</div><h3>Portal transportadora</h3><p>Login en el sitio del proveedor. Por cada guía: estado/checkpoint, nombre del cliente, dirección, teléfono.</p></div>
+        <div class="card reveal d1"><div class="ic" style="background:var(--cyan-soft)">②</div><h3>PackTrack /paquetes</h3><p><code>GET /paquetes?codigo=GUIA</code>. Localiza la fila por número de guía y saca <b>fecha</b>, <b>mensajero</b> y <b>estado</b> local.</p></div>
+        <div class="card reveal d2"><div class="ic" style="background:var(--green-soft)">③</div><h3>PackTrack /mensajeros</h3><p><code>GET /mensajeros?query=NOMBRE</code>. Con el nombre del mensajero busca su <b>celular</b> para el aviso de WhatsApp.</p></div>
+      </div>
+
+      <div class="note info reveal d2">
+        <span class="ni">🔗</span>
+        <div>El resultado final de cada guía es la <b>fusión</b> de las tres consultas. Las columnas marcadas <code>cliente_*</code> vienen del portal de la transportadora; <code>fecha</code>, <code>mensajero</code> y <code>estado</code> suelen ganar los de PackTrack. La selección de columnas es tolerante: busca por nombre de cabecera (<code>mensajero</code>, <code>courier</code>, <code>driver</code>…) y si no, cae a una posición fija.</div>
+      </div>
+    </section>
+
+    <!-- FLUJOS -->
+    <section id="flujos">
+      <span class="eyebrow reveal">Paso a paso</span>
+      <h2 class="sec reveal">Flujos de trabajo</h2>
+      <p class="lead reveal">Las cuatro pestañas de la app, cada una con su recorrido real de principio a fin. Haz clic para cambiar de flujo.</p>
+
+      <div class="tabs reveal d1">
+        <div class="tab active" data-tab="f1">📦 Pendientes</div>
+        <div class="tab" data-tab="f2">✉️ Correo SAC</div>
+        <div class="tab" data-tab="f3">🚚 Asignación</div>
+        <div class="tab" data-tab="f4">🧮 Contabilidad</div>
+      </div>
+
+      <!-- F1 PENDIENTES -->
+      <div class="panel active" id="f1">
+        <div class="note info"><span class="ni">🎯</span><div><b>Objetivo:</b> dado un lote de guías de un proveedor, saber cuántos paquetes pendientes tiene cada mensajero y (opcional) avisarles por WhatsApp. Página <code>/</code>. Proveedores activos: Proships, X-Cargo, iMile. <b>Pasarex está deshabilitado</b> en esta pantalla.</div></div>
+        <div class="steps">
+          <div class="step"><div class="dot">1</div><div class="body"><h4>El usuario pega las guías</h4><p>En la tarjeta del proveedor pega una guía por línea (o separadas por coma) y deja marcado "Enviar por WhatsApp". Pulsa <b>Procesar</b>.</p><span class="where">frontend/index.html · app.js → initPendingCard()</span></div></div>
+          <div class="step"><div class="dot">2</div><div class="body"><h4>POST al servidor</h4><p><code>POST /api/pending/&lt;proveedor&gt;/start</code> con <code>{ packages, whatsapp }</code>. El JS desactiva el botón y arranca el <i>polling</i>.</p><span class="where">app.js · fetch()</span></div></div>
+          <div class="step"><div class="dot">3</div><div class="body"><h4>El servidor prepara y lanza</h4><p>Escribe <code>paquetes.txt</code> en la carpeta del proveedor, fija <code>SEND_WHATSAPP=1</code> si aplica y lanza el spider con <code>subprocess.Popen([sys.executable, script])</code>. Un hilo <i>watcher</i> espera el final. <b>Solo aquí se respeta <code>RUN_SPIDERS</code>:</b> si es <code>0</code>, devuelve datos simulados.</p><span class="where">server.py → _start_pending_scraper() / _watch_pending_scraper()</span></div></div>
+          <div class="step"><div class="dot">4</div><div class="body"><h4>El spider trabaja (doble sesión)</h4><p>Abre Chrome, loguea en el portal del proveedor <i>y</i> en PackTrack en pestañas separadas. Por cada guía hace el cruce de 3 consultas y arma una fila. Pausa ~1s entre guías.</p><span class="where">proships / x-cargo / imile spider → main()</span></div></div>
+          <div class="step"><div class="dot">5</div><div class="body"><h4>Escribe resultados</h4><p>Genera <code>resultados.csv</code> (10 columnas) y <code>mensajes_whatsapp.csv</code>. Si WhatsApp está activo, abre WhatsApp Web y envía a cada mensajero su lista de pendientes.</p><span class="where">resultados.csv · mensajes_whatsapp.csv</span></div></div>
+          <div class="step"><div class="dot">6</div><div class="body"><h4>El watcher actualiza el estado</h4><p>Al terminar el proceso, lee el CSV de disco y pasa el estado a <code>Finalizado</code> (o <code>Error</code> con el log). Todo queda en <code>SCRAPER_STATES[proveedor]</code>.</p><span class="where">server.py → _run_spider_results_from_disk()</span></div></div>
+          <div class="step"><div class="dot">7</div><div class="body"><h4>La UI hace polling y agrega</h4><p>Cada 2s el JS consulta <code>/status</code>. Filtra en cliente los estados entregados/devueltos y <b>agrupa por mensajero + fecha mostrando el conteo</b> de pendientes (no la fila cruda).</p><span class="where">app.js → pollStatus() / renderPendingResults()</span></div></div>
+          <div class="step"><div class="dot">8</div><div class="body"><h4>Descarga</h4><p>Botones <b>Descargar CSV</b> (<code>/download.csv</code>) y <b>Descargar Excel</b> (<code>/download.xlsx</code>, que es en realidad una tabla HTML servida como <code>.xls</code>).</p><span class="where">GET /api/pending/&lt;proveedor&gt;/download.csv|xlsx</span></div></div>
+        </div>
+      </div>
+
+      <!-- F2 CORREO -->
+      <div class="panel" id="f2">
+        <div class="note info"><span class="ni">🎯</span><div><b>Objetivo:</b> generar el Excel oficial "Novedades SAC" a partir de una lista de códigos Proships. Página <code>/correo/</code>.</div></div>
+        <div class="steps">
+          <div class="step"><div class="dot">1</div><div class="body"><h4>El usuario pega códigos</h4><p>Códigos separados por línea o coma. Pulsa <b>Generar Excel</b>.</p><span class="where">frontend/correo/index.html · correo.js</span></div></div>
+          <div class="step"><div class="dot">2</div><div class="body"><h4>POST /api/correo/process</h4><p>Envía <code>{ codes }</code>. El servidor escribe <code>paquetes.txt</code> en <code>proships_correo/</code> y ejecuta el script de forma <b>síncrona</b> (espera a que termine).</p><span class="where">server.py → _run_correo_spider()</span></div></div>
+          <div class="step"><div class="dot">3</div><div class="body"><h4>Selenium raspa Proships</h4><p>Loguea en <code>tracking.proships.com</code>. Por cada código: busca, lee el último checkpoint del timeline, extrae comprador, teléfono, dirección y ciudad.</p><span class="where">proships_correo/proships_spider.py</span></div></div>
+          <div class="step"><div class="dot">4</div><div class="body"><h4>Rellena la plantilla con openpyxl</h4><p>Abre <code>FORMATO DE NOVEDADES SAC.xlsx</code>, detecta la fila de cabeceras automáticamente (escanea hasta 50 filas), mapea columnas por nombre (Guía Proships, Nombre, Dirección, Teléfono, Ciudad y Dep., Novedad Operador) y escribe copiando el estilo de la fila previa.</p><span class="where">escribir_en_plantilla_xlsx()</span></div></div>
+          <div class="step"><div class="dot">5</div><div class="body"><h4>Descarga</h4><p>La UI llama <code>GET /api/correo/download</code> y baja el <code>.xlsx</code> ya rellenado.</p><span class="where">GET /api/correo/download</span></div></div>
+        </div>
+        <div class="note warn"><span class="ni">⚠️</span><div>No hay filtro de "qué es novedad": escribe <b>una fila por cada código</b>, usando el texto del checkpoint como novedad. No distingue incidencia real de estado normal.</div></div>
+      </div>
+
+      <!-- F3 ASIGNACION -->
+      <div class="panel" id="f3">
+        <div class="note info"><span class="ni">🎯</span><div><b>Objetivo:</b> asignar guías a un mensajero/vehículo en la plataforma de la transportadora. Página <code>/pasarex_asignar/</code>. Selector de plataforma: <b>Proships</b>, <b>iMile</b>, y Pasarex (deshabilitado en el dropdown).</div></div>
+        <div class="note info"><span class="ni">🧩</span><div>Al cargar la página, el servidor lee los <i>scripts</i> de asignación con el módulo <code>ast</code> de Python y extrae los diccionarios de credenciales (<code>CREDENCIALES</code> / <code>credenciales</code>) para poblar los desplegables — sin importar ni ejecutar el código.</div></div>
+        <div class="steps">
+          <div class="step"><div class="dot">1</div><div class="body"><h4>Elegir plataforma, credencial y guías</h4><p>El JS muestra el desplegable de credenciales correcto según la plataforma. Pulsa <b>Procesar</b> → <code>POST /api/pasarex/asignar/procesar</code>.</p><span class="where">app.js → pasarexProcesar()</span></div></div>
+          <div class="step"><div class="dot">2</div><div class="body"><h4>Ramificación por modo</h4><p>El servidor valida la credencial y, según el modo, lanza un subproceso distinto y vigila su salida con un hilo. El <i>polling</i> de la UI consulta <code>GET /api/pasarex/asignar</code>.</p><span class="where">server.py → do_POST() · _watch_pasarex()</span></div></div>
+          <div class="step"><div class="dot" style="background:var(--brand)">A</div><div class="body"><h4>Modo Proships (real)</h4><p>Genera un <code>archivo_create_order.xlsx</code> con <code>tracking_number</code> + un email, lo sube al backend de MailAmericas (<code>create_order</code>) y espera el texto "Successful assignments". Imprime <code>STATUS: …</code> que el servidor detecta como éxito.</p><span class="where">proships/asignar_proships/asignar_proships.py</span></div></div>
+          <div class="step"><div class="dot" style="background:var(--violet)">B</div><div class="body"><h4>Modo Pasarex (real, oculto)</h4><p>Login en TrackerWin + portal de proveedores, resuelve reCAPTCHA con NopeCHA, selecciona courier y vehículo por placa, genera la planilla y la transmite a SimpliRoute. 24 credenciales reales embebidas.</p><span class="where">pasarex_asignar/asignar_pasarex.py</span></div></div>
+          <div class="step"><div class="dot" style="background:var(--amber)">C</div><div class="body"><h4>Modo iMile (simulado)</h4><p>El servidor <b>no ejecuta scraping</b>: marca el estado como <code>OK</code> al instante. El archivo <code>asignar_imile.py</code> es un stub que solo imprime <code>STATUS: OK</code>.</p><span class="where">imile/asignar_imile.py · server fija status="OK"</span></div></div>
+        </div>
+      </div>
+
+      <!-- F4 CONTABILIDAD -->
+      <div class="panel" id="f4">
+        <div class="note info"><span class="ni">🎯</span><div><b>Objetivo:</b> consolidar cuánto se le paga a cada mensajero según paquetes plus/normales, y opcionalmente enviarles el reporte por Telegram. Página <code>/contabilidad/</code>. Empresas: X-Cargo, Proships (Pasarex deshabilitado).</div></div>
+        <div class="steps">
+          <div class="step"><div class="dot">1</div><div class="body"><h4>Empresa + paquetes + ¿Telegram?</h4><p>El usuario elige empresa, pega guías y marca o no "Enviar resumen por Telegram". <code>POST /api/contabilidad/process</code> con <code>{ company, packages, send_telegram }</code>.</p><span class="where">frontend/contabilidad/contabilidad.js</span></div></div>
+          <div class="step"><div class="dot">2</div><div class="body"><h4>El servidor elige el script</h4><p>Si <code>send_telegram</code> → <code>contabilidad_spider_con_telegram_v3.py</code>; si no → <code>contabilidad_spider.py</code>. Pasa <code>CONTABILIDAD_EMPRESA</code> y <code>SEND_TELEGRAM</code>. Ejecución síncrona.</p><span class="where">server.py → _run_contabilidad_spider()</span></div></div>
+          <div class="step"><div class="dot">3</div><div class="body"><h4>Raspa PackTrack y clasifica</h4><p>Loguea en PackTrack, busca cada guía y clasifica el municipio como <b>plus</b> (rural/vereda/corregimiento) o <b>normal</b>. Acumula conteos por mensajero.</p><span class="where">paquetes_buscar_y_extraer() · es_plus()</span></div></div>
+          <div class="step"><div class="dot">4</div><div class="body"><h4>Calcula dinero por tarifa</h4><p>Multiplica conteos por la tarifa de la empresa (p. ej. plus $2.700, normal $2.500). Suma el total por mensajero. Las guías sin mensajero van a <code>guias_sin_asignar.txt</code>.</p><span class="where">consolidar_por_mensajero()</span></div></div>
+          <div class="step"><div class="dot">5</div><div class="body"><h4>Devuelve y pinta la tabla</h4><p>El servidor responde <code>{ results, guias_sin_asignar }</code>. La UI dibuja columnas por empresa y una fila de TOTAL GENERAL. <b>Pasarex se factura distinto</b> (todo como plus × tarifa especial), ajustado en el servidor.</p><span class="where">contabilidad.js → renderResults()</span></div></div>
+          <div class="step"><div class="dot">6</div><div class="body"><h4>(Opcional) Telegram Web</h4><p>Si estaba activo, abre Telegram Web con perfil persistente y envía a cada mensajero su reporte de pago vía <code>t.me/+telefono</code>. No usa Bot API.</p><span class="where">enviar_resumenes_por_telegram()</span></div></div>
+        </div>
+        <div class="note warn"><span class="ni">⚠️</span><div>El periodo del mensaje de Telegram está <b>hardcodeado</b> como "Del 16 al 28 de febrero". Y el CSV de la versión simple divide el dinero entre 1000, mientras que la de Telegram no — la UI compensa esto con <code>normalizeMoneyValue()</code>.</div></div>
+      </div>
+    </section>
+
+    <!-- WHATSAPP / TELEGRAM -->
+    <section id="whatsapp">
+      <span class="eyebrow reveal">Mensajería</span>
+      <h2 class="sec reveal">WhatsApp & Telegram (vía navegador)</h2>
+      <p class="lead reveal">No hay APIs de por medio. Se automatiza la versión web de cada app con Selenium, manteniendo la sesión en un perfil de Chrome en disco. La primera vez hay que escanear el QR a mano.</p>
+      <div class="grid g2">
+        <div class="card reveal">
+          <div class="ic" style="background:var(--green-soft)">💬</div>
+          <h3>WhatsApp Web</h3>
+          <ul class="clean">
+            <li>Perfil persistente <code>.whatsapp_web_profile</code>; espera el QR hasta <code>WHATSAPP_FIRST_LOAD_SEC</code> (120s).</li>
+            <li>Abre <code>web.whatsapp.com/send?phone=…&text=…</code> con el mensaje ya en la URL y presiona ENTER.</li>
+            <li>Confirma el envío contando los <code>div.message-out</code> y esperando el doble check.</li>
+            <li>Normaliza teléfonos a Colombia (<code>+57</code>) por defecto; deduplica por número.</li>
+            <li><b>Excluye</b> entregados/devueltos: solo manda pendientes, agrupados por antigüedad en días.</li>
+          </ul>
+        </div>
+        <div class="card reveal d1">
+          <div class="ic" style="background:var(--cyan-soft)">✈️</div>
+          <h3>Telegram Web</h3>
+          <ul class="clean">
+            <li>Solo en la versión <code>_con_telegram_v3</code> de contabilidad y si <code>SEND_TELEGRAM</code> es verdadero.</li>
+            <li>Perfil persistente <code>telegram_profile/</code>; QR la primera vez (hasta 180s).</li>
+            <li>Abre el chat por <code>t.me/+telefono</code> y teclea el reporte (Shift+Enter entre líneas, Enter para enviar).</li>
+            <li>Mensaje con detalle de servicios plus/estándar y <b>Total a pagar</b>; salta mensajeros sin teléfono.</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3 class="reveal" style="font-size:1.1rem;margin:28px 0 14px">Cómo Proships le dice al mensajero cuántos días lleva pendiente cada paquete</h3>
+      <p class="reveal" style="color:var(--ink-soft);margin:0 0 16px">El spider de Proships no manda una lista plana: arma un solo mensaje por mensajero y <b>agrupa los paquetes por antigüedad en días</b>, de más viejo a más reciente, para que el repartidor vea de un vistazo qué lleva más tiempo sin entregar. Toda la lógica vive en <code>proships_spider_with_whatsapp_v2.py</code>.</p>
+
+      <div class="grid g2">
+        <div class="card reveal">
+          <h3>Qué hace, paso a paso</h3>
+          <ul class="clean">
+            <li><b>Agrupa por mensajero.</b> Junta todas las guías por <code>(mensajero, celular)</code>; descarta filas sin mensajero o sin celular.</li>
+            <li><b>Filtra pendientes.</b> <code>is_pendiente()</code> deja fuera lo que contenga <i>entregado / delivered / devolución / devuelto / return / retorno</i> en estado o checkpoint.</li>
+            <li><b>Calcula los días.</b> <code>days_ago()</code> parsea la <code>fecha</code> en formato <code>dd/mm/YYYY</code> y resta contra hoy → número de días pendiente.</li>
+            <li><b>Hace buckets por día</b> y los recorre <b>de mayor a menor</b> (los más atrasados primero), con encabezado <code>Pendientes de hace X día(s):</code>.</li>
+            <li>Cada paquete sale como una línea <code>Fecha, Guía, Cliente, Dirección</code>. Lo envía por WhatsApp Web y lo vuelca a <code>mensajes_whatsapp.csv</code>.</li>
+          </ul>
+          <span class="where">proships_spider_with_whatsapp_v2.py → build_pendientes_por_mensajero()</span>
+        </div>
+        <div class="card reveal d1">
+          <h3>El cálculo de días</h3>
+          <pre style="margin-top:4px;font-size:.78rem">def days_ago(fecha_str):
+    d = datetime.strptime(
+        fecha_str.strip(), "%d/%m/%Y").date()
+    <span class="c"># hoy menos la fecha de la guía</span>
+    return (datetime.now().date() - d).days
+
+buckets = defaultdict(list)
+for it in items:
+    if not is_pendiente(it["estado"],
+                        it["checkpoint_code"]):
+        continue                 <span class="c"># salta entregados/devueltos</span>
+    da = days_ago(it["fecha"])
+    buckets[da].append(it)       <span class="c"># agrupa por antigüedad</span>
+
+<span class="c"># más viejo primero</span>
+for da in sorted(buckets, reverse=True):
+    lineas.append(f"\nPendientes de hace {da} día(s):")</pre>
+        </div>
+      </div>
+
+      <p class="reveal" style="color:var(--ink-soft);margin:18px 0 8px">Así se ve el mensaje que recibe el mensajero (recortado):</p>
+      <pre class="reveal" style="font-size:.78rem">Hola, Oscar David Hoyos Mosquera, tienes pendientes los siguientes paquetes de proships:
+Formato: Fecha, Guía, Cliente nombre, Dirección
+
+Pendientes de hace 8 día(s):
+04/06/2026, ML621195025MH, deiner Vanegas, cr42#49-113 barrio 20 de julio taller maquinas
+04/06/2026, ML264694950MH, Liseth Molina, Barrio Buenos Aires Cra 26 calle 4 …
+04/06/2026, MLCO006745395EX, Luis Alejandro pareja Alvarez, calle 49a 44-18 barrio sevilla
+…
+
+Pendientes de hace 2 día(s):
+10/06/2026, MLCO006505951EX, Fabio Builes Gonzalez, TRANSVERSAL 16 31-219 CASA …
+10/06/2026, ML621292827MH, Kelly Berrio, Cra 22 #9B-45 esquina Edificio Kasa Blanca Spa
+10/06/2026, ML621255886MH, Soraida Hernández, Calle 19 #8-78 Epika Boutique
+…</pre>
+      <div class="note info reveal"><span class="ni">📅</span><div>Los días salen de la <b>fecha de PackTrack</b> (cuándo entró la guía), no de la fecha de scraping. Si la fecha viene vacía o con otro formato, <code>days_ago()</code> devuelve <code>None</code> y ese paquete <b>no entra</b> al aviso. Hoy = <code>datetime.now()</code> en la máquina que corre el spider.</div></div>
+
+      <div class="note warn reveal d2"><span class="ni">🧱</span><div>Estos flujos dependen de selectores frágiles (<code>data-testid</code>, <code>aria-label</code>, texto en ES/EN) que WhatsApp y Telegram cambian seguido. Es la parte más propensa a romperse con el tiempo.</div></div>
+    </section>
+
+    <!-- API -->
+    <section id="api">
+      <span class="eyebrow reveal">Contrato</span>
+      <h2 class="sec reveal">API HTTP</h2>
+      <p class="lead reveal">Todo lo que expone <code>server.py</code>. Lo demás es servir archivos estáticos de <code>frontend/</code>.</p>
+      <div class="tw reveal d1">
+        <table class="data">
+          <thead><tr><th>Método</th><th>Ruta</th><th>Qué hace</th></tr></thead>
+          <tbody>
+            <tr><td><span class="tag t-green">POST</span></td><td><code>/api/pending/&lt;prov&gt;/start</code></td><td>Lanza el scraper del proveedor en segundo plano. Respeta <code>RUN_SPIDERS</code>.</td></tr>
+            <tr><td><span class="tag t-blue">GET</span></td><td><code>/api/pending/&lt;prov&gt;/status</code></td><td>Estado actual + resultados (objeto de <code>SCRAPER_STATES</code>). Lo consulta el polling.</td></tr>
+            <tr><td><span class="tag t-blue">GET</span></td><td><code>/api/pending/&lt;prov&gt;/download.csv</code></td><td>Descarga el <code>resultados.csv</code> del proveedor.</td></tr>
+            <tr><td><span class="tag t-blue">GET</span></td><td><code>/api/pending/&lt;prov&gt;/download.xlsx</code></td><td>Resultados como tabla HTML servida con MIME de Excel (<code>.xls</code>).</td></tr>
+            <tr><td><span class="tag t-green">POST</span></td><td><code>/api/correo/process</code></td><td>Genera el Excel de Novedades SAC (síncrono). <b>Ignora <code>RUN_SPIDERS</code></b>.</td></tr>
+            <tr><td><span class="tag t-blue">GET</span></td><td><code>/api/correo/download</code></td><td>Descarga <code>FORMATO DE NOVEDADES SAC.xlsx</code>.</td></tr>
+            <tr><td><span class="tag t-green">POST</span></td><td><code>/api/contabilidad/process</code></td><td>Consolida por mensajero; opcional Telegram. Devuelve filas + guías sin asignar.</td></tr>
+            <tr><td><span class="tag t-blue">GET</span></td><td><code>/api/pasarex/asignar</code></td><td>Estado + credenciales de asignación (parseadas con <code>ast</code>).</td></tr>
+            <tr><td><span class="tag t-green">POST</span></td><td><code>/api/pasarex/asignar/procesar</code></td><td>Lanza la asignación según modo (proships/pasarex reales, imile simulado).</td></tr>
+            <tr><td><span class="tag t-blue">GET</span></td><td><code>/api/download</code></td><td>Descarga el primer <code>resultados.csv</code> que exista (proships/x-cargo/pasarex).</td></tr>
+            <tr><td><span class="tag t-red">POST</span></td><td><code>/api/process</code></td><td><b>Roto / sin uso.</b> Referencia una variable inexistente (<code>contabilidad_data</code>) → fallaría. Ningún frontend lo llama.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- DATOS -->
+    <section id="datos">
+      <span class="eyebrow reveal">Esquema</span>
+      <h2 class="sec reveal">Esquema de datos</h2>
+      <p class="lead reveal">El <code>resultados.csv</code> de los scrapers de pendientes tiene siempre las mismas 10 columnas. El servidor las lee por posición.</p>
+      <div class="tw reveal d1">
+        <table class="data">
+          <thead><tr><th>#</th><th>Columna</th><th>Origen</th><th>Nota</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td><code>tracking</code></td><td>Portal</td><td>Número de guía.</td></tr>
+            <tr><td>2</td><td><code>status</code></td><td>Portal</td><td>Último checkpoint del proveedor.</td></tr>
+            <tr><td>3</td><td><code>fecha</code></td><td>PackTrack</td><td>Formato <code>dd/mm/aaaa</code>.</td></tr>
+            <tr><td>4</td><td><code>tracking</code> (dup)</td><td>—</td><td>Columna duplicada a propósito; suele ir vacía.</td></tr>
+            <tr><td>5</td><td><code>cliente_direccion</code></td><td>Portal</td><td></td></tr>
+            <tr><td>6</td><td><code>cliente_nombre</code></td><td>Portal</td><td></td></tr>
+            <tr><td>7</td><td><code>cliente_numero</code></td><td>Portal</td><td>Teléfono del cliente.</td></tr>
+            <tr><td>8</td><td><code>municipio</code></td><td>Portal</td><td><b>Casi siempre vacío</b> en proships/imile.</td></tr>
+            <tr><td>9</td><td><code>mensajero</code></td><td>PackTrack</td><td></td></tr>
+            <tr><td>10</td><td><code>estado</code></td><td>PackTrack</td><td>Estado local; decide si está pendiente.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note info reveal d2"><span class="ni">📌</span><div>El celular del mensajero (<code>mensajero_celular</code>) se captura para WhatsApp pero <b>no</b> se escribe en <code>resultados.csv</code>. Contabilidad usa otro CSV: <code>mensajero, plus, total_plus, normal, total_normal, total_general</code>.</div></div>
+    </section>
+
+    <!-- CONFIG -->
+    <section id="config">
+      <span class="eyebrow reveal">Ajustes</span>
+      <h2 class="sec reveal">Configuración por entorno</h2>
+      <p class="lead reveal">Todo se controla con variables de entorno. Los scripts traen <b>credenciales reales por defecto</b> embebidas (ver la sección final).</p>
+      <div class="grid g2">
+        <div class="card reveal"><h3>🔀 Modo de ejecución</h3>
+          <ul class="clean">
+            <li><code>RUN_SPIDERS</code> — <code>1</code> ejecuta scrapers reales; <code>0</code> simula. <b>Ojo:</b> solo lo respetan Pendientes y el endpoint roto. Correo, contabilidad y asignación corren real siempre.</li>
+            <li><code>HOST</code> / <code>PORT</code> — por defecto <code>0.0.0.0:8002</code>.</li>
+          </ul>
+        </div>
+        <div class="card reveal d1"><h3>🔑 Credenciales</h3>
+          <ul class="clean">
+            <li><code>PROSHIPS_*</code>, <code>BIGSMART_*</code>, <code>TRACKER_*</code>, <code>IMILE_*</code> — portales de transportadoras.</li>
+            <li><code>PAQUETES_*</code> / <code>PACKTRACK_*</code> — login de PackTrack.</li>
+            <li><code>PACKTRACK_BASE_URL</code> — por defecto <code>https://packtrack.site</code>.</li>
+          </ul>
+        </div>
+        <div class="card reveal d2"><h3>💬 WhatsApp</h3>
+          <ul class="clean">
+            <li><code>SEND_WHATSAPP</code> (1/0), <code>WHATSAPP_COUNTRY_CODE</code> (57).</li>
+            <li>Tiempos: <code>WHATSAPP_FIRST_LOAD_SEC</code>, <code>_CHAT_READY_SEC</code>, <code>_WAIT_TICKS_SEC</code>, <code>_POST_SEND_SEC</code>.</li>
+            <li><code>WHATSAPP_PROFILE_DIR</code> — perfil de sesión.</li>
+          </ul>
+        </div>
+        <div class="card reveal"><h3>✈️ Telegram & Contabilidad</h3>
+          <ul class="clean">
+            <li><code>SEND_TELEGRAM</code> (1/true/yes/on).</li>
+            <li><code>CONTABILIDAD_EMPRESA</code> — define tarifas y texto (por defecto <code>proships</code>).</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- EJECUTAR -->
+    <section id="ejecutar">
+      <span class="eyebrow reveal">Manos a la obra</span>
+      <h2 class="sec reveal">Cómo ejecutar</h2>
+      <div class="grid g2">
+        <div class="reveal">
+          <h3>Modo prueba (simulado)</h3>
+          <pre><span class="c"># entorno + dependencias</span>
+python3 -m venv venv
+source venv/bin/activate
+pip install selenium chromedriver-autoinstaller \
+  openpyxl requests scrapy pandas \
+  undetected-chromedriver scrapy-playwright
+
+<span class="c"># servidor sin scraping real</span>
+RUN_SPIDERS=0 python3 server.py
+<span class="c"># abre http://127.0.0.1:8002/</span></pre>
+        </div>
+        <div class="reveal d1">
+          <h3>Modo real (con navegador)</h3>
+          <pre><span class="c"># requiere pantalla/display: Chrome NO es headless</span>
+source venv/bin/activate
+RUN_SPIDERS=1 python3 server.py
+
+<span class="c"># 1ª vez: escanear QR de WhatsApp/Telegram</span>
+<span class="c"># cuando un spider lo pida en la ventana de Chrome</span></pre>
+        </div>
+      </div>
+      <div class="note danger reveal d2"><span class="ni">🖥️</span><div><b>Necesita entorno gráfico.</b> Todos los scripts fijan <code>HEADLESS = False</code> y abren Chrome visible (por el QR y el reCAPTCHA). En un servidor sin display hay que usar algo como <code>Xvfb</code>; el <code>Dockerfile</code> actual no lo incluye.</div></div>
+    </section>
+
+    <!-- VERDAD -->
+    <section id="verdad">
+      <span class="eyebrow reveal" style="background:var(--red-soft);color:var(--red)">Honestidad técnica</span>
+      <h2 class="sec reveal">Verdad sin maquillaje</h2>
+      <p class="lead reveal">Lo que la documentación bonita suele esconder. Todo esto está confirmado leyendo el código, no asumido.</p>
+
+      <details class="acc danger reveal"><summary>🔓 Credenciales reales embebidas en el código <span class="chev">›</span></summary>
+        <div class="inner">Casi todos los scripts traen email + contraseña reales como valores por defecto de <code>os.getenv</code> (Proships, BigSmart, PackTrack, Pasarex, iMile). El asignador de Pasarex incluye <b>24 credenciales completas</b> (usuario + clave + placa). Cualquiera con acceso al repo las tiene. Deberían moverse a variables de entorno o un gestor de secretos.</div>
+      </details>
+      <details class="acc reveal d1"><summary>🪟 Ruta de perfil Windows en el spider de Pasarex <span class="chev">›</span></summary>
+        <div class="inner">El spider y el asignador de Pasarex apuntan a <code>C:\Users\jhami\AppData\Local\Google\Chrome\User Data</code> con <code>Profile 3</code>. En este host Linux esa ruta no existe — fallaría tal cual. Probablemente se desarrolló en la máquina de un operador concreto.</div>
+      </details>
+      <details class="acc reveal d2"><summary>🧟 Código muerto y endpoints rotos <span class="chev">›</span></summary>
+        <div class="inner">
+          <ul class="clean">
+            <li><code>POST /api/process</code> referencia <code>contabilidad_data</code>, que no existe en su ámbito → <code>NameError</code>. Ningún frontend lo usa.</li>
+            <li>El bloque de contabilidad de <code>app.js</code> llama a <code>/api/contabilidad/empresas</code> y <code>/results</code>, que <b>no existen</b> en el servidor. Es código inerte: la página real de contabilidad usa <code>contabilidad/contabilidad.js</code>.</li>
+            <li>Varios spiders tienen bloques tras un <code>return</code>/<code>finally</code> que nunca se ejecutan (lógica duplicada de WhatsApp, normalizadores sin usar).</li>
+            <li><code>asignar_proships.py</code> sube el archivo <b>dos veces</b> y termina con un <code>input()</code> bloqueante.</li>
+          </ul>
+        </div>
+      </details>
+      <details class="acc reveal"><summary>🚫 Funciones desactivadas o falsas <span class="chev">›</span></summary>
+        <div class="inner">
+          <ul class="clean">
+            <li><b>Pasarex</b> está deshabilitado en las 3 pantallas que lo mencionan (pendientes, asignación, contabilidad), aunque el backend conserva la lógica.</li>
+            <li><b>Asignación iMile</b> es un placebo: el servidor responde <code>OK</code> al instante y el script solo imprime <code>STATUS: OK</code>. No asigna nada real.</li>
+            <li>El "Descargar Excel" de pendientes no es un xlsx real, es HTML con extensión <code>.xls</code>.</li>
+          </ul>
+        </div>
+      </details>
+      <details class="acc reveal d1"><summary>🧱 Fragilidad y rendimiento <span class="chev">›</span></summary>
+        <div class="inner">
+          <ul class="clean">
+            <li>Selectores CSS/XPath muy específicos y muchos <code>time.sleep</code> fijos: lento y quebradizo ante cambios de UI.</li>
+            <li>Columna <code>municipio</code> casi siempre vacía; cabecera <code>tracking</code> duplicada en el CSV.</li>
+            <li>El generador de Novedades reabre y guarda el Excel completo en cada fila (O(n) por guía).</li>
+            <li>Llamadas a subproceso inconsistentes: pendientes usa <code>sys.executable</code>, los demás usan <code>"python3"</code> (puede saltarse el venv — está documentado como error conocido en el README).</li>
+          </ul>
+        </div>
+      </details>
+      <details class="acc reveal d2"><summary>🐳 Docker arranca en simulado e incompleto <span class="chev">›</span></summary>
+        <div class="inner">El <code>Dockerfile</code> instala <code>selenium webdriver-manager openpyxl requests scrapy</code> — le faltan <code>chromedriver-autoinstaller</code>, <code>scrapy-playwright</code> y <code>pandas</code> que sí usa el código. No define <code>RUN_SPIDERS</code> (queda en 0 → simulado) ni incluye un display para Chrome visible. Sirve para la UI, no para scraping real tal cual.</div>
+      </details>
+
+      <div class="note ok reveal" style="margin-top:24px"><span class="ni">✅</span><div><b>En resumen:</b> la arquitectura UI → servidor → subproceso → CSV es sólida y fácil de seguir. Las grietas están en seguridad (secretos en código), portabilidad (rutas/headless) y en funciones que se muestran en la UI pero no operan (Pasarex, asignación iMile). Saberlo evita sorpresas.</div></div>
+    </section>
+
+    <!-- MEJORAS -->
+    <section id="mejoras">
+      <span class="eyebrow reveal" style="background:var(--green-soft);color:var(--green)">Hoja de ruta</span>
+      <h2 class="sec reveal">Mejoras propuestas</h2>
+      <p class="lead reveal">Cada punto sale de leer el código real. Está ordenado por impacto + esfuerzo. Las críticas de seguridad no tienen excusa de posponerlas.</p>
+
+      <!-- LEGEND BADGES -->
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:28px" class="reveal d1">
+        <span class="tag t-red" style="font-size:.82rem;padding:5px 11px">🔴 Crítico</span>
+        <span class="tag t-amber" style="font-size:.82rem;padding:5px 11px">🟠 Alto</span>
+        <span class="tag t-blue" style="font-size:.82rem;padding:5px 11px">🔵 Medio</span>
+        <span class="tag t-green" style="font-size:.82rem;padding:5px 11px">🟢 Nice-to-have</span>
+        <span style="font-size:.82rem;color:var(--muted);padding:5px 0">· Esfuerzo: <b>XS</b> &lt;1h · <b>S</b> medio día · <b>M</b> 1-2 días · <b>L</b> 1 semana</span>
+      </div>
+
+      <!-- ======= SEGURIDAD ======= -->
+      <h3 class="reveal" style="font-size:1.15rem;margin:0 0 14px;display:flex;align-items:center;gap:10px">
+        <span style="background:var(--red-soft);color:var(--red);padding:4px 12px;border-radius:8px;font-size:.85rem;font-weight:700">🔴 CRÍTICO · Seguridad</span>
+      </h3>
+
+      <div class="grid g2 reveal d1" style="margin-bottom:32px">
+        <div class="card" style="border-left:4px solid var(--red)">
+          <h3>🔑 Sacar credenciales del código</h3>
+          <p><b>Problema:</b> 24 credenciales de Pasarex + logins de Proships, BigSmart, PackTrack, iMile con contraseñas reales en el repo. Cualquiera con acceso lee las claves.</p>
+          <p style="margin-top:10px"><b>Solución:</b> Mover todo a un archivo <code>.env</code> (excluido con <code>.gitignore</code>) y cargarlo al inicio del servidor con <code>python-dotenv</code>. Los scripts leen solo <code>os.getenv()</code>, ya lo hacen — solo falta quitarles el valor por defecto.</p>
+          <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+            <span class="tag t-red">Seguridad crítica</span>
+            <span class="tag t-green">Esfuerzo XS</span>
+            <span class="tag t-amber">Impacto alto</span>
+          </div>
+          <pre style="margin-top:12px;font-size:.78rem"># .env
+PROSHIPS_EMAIL=tu@email.com
+PROSHIPS_PASSWORD=secreto
+PACKTRACK_EMAIL=otro@email.com
+# ... etc
+
+# server.py (una línea al inicio)
+from dotenv import load_dotenv; load_dotenv()</pre>
+        </div>
+
+        <div class="card" style="border-left:4px solid var(--red)">
+          <h3>🪟 Eliminar ruta Windows hardcodeada</h3>
+          <p><b>Problema:</b> <code>asignar_pasarex.py</code> y <code>spider_pasarex.py</code> apuntan a <code>C:\Users\jhami\AppData\Local\Google\Chrome\User Data</code>. En Linux ese perfil no existe → Chrome falla o abre sin sesión.</p>
+          <p style="margin-top:10px"><b>Solución:</b> Reemplazar por variable de entorno <code>CHROME_PROFILE_DIR</code> con fallback a una ruta relativa al proyecto (igual que hacen los otros spiders con <code>WHATSAPP_PROFILE_DIR</code>).</p>
+          <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+            <span class="tag t-red">Bug portabilidad</span>
+            <span class="tag t-green">Esfuerzo XS</span>
+          </div>
+          <pre style="margin-top:12px;font-size:.78rem">CHROME_PROFILE_DIR = os.getenv(
+    "CHROME_PROFILE_DIR",
+    str(Path(__file__).parent / ".chrome_profile")
+)</pre>
+        </div>
+      </div>
+
+      <!-- ======= ALTO ======= -->
+      <h3 class="reveal" style="font-size:1.15rem;margin:0 0 14px;display:flex;align-items:center;gap:10px">
+        <span style="background:var(--amber-soft);color:var(--amber);padding:4px 12px;border-radius:8px;font-size:.85rem;font-weight:700">🟠 ALTO · Bugs reales</span>
+      </h3>
+
+      <div class="grid g2 reveal d1" style="margin-bottom:32px">
+        <div class="card" style="border-left:4px solid var(--amber)">
+          <h3>💥 Arreglar <code>/api/process</code></h3>
+          <p><b>Problema:</b> El handler <code>POST /api/process</code> referencia <code>contabilidad_data</code> (línea 664) que nunca se define en ese scope → <code>NameError</code> garantizado si alguien lo llama.</p>
+          <p style="margin-top:10px"><b>Solución inmediata:</b> Eliminar el endpoint entero — ningún frontend lo usa. Si en el futuro se necesita, reimplementarlo desde cero con la variable correcta.</p>
+          <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+            <span class="tag t-amber">Bug silencioso</span><span class="tag t-green">Esfuerzo XS</span>
+          </div>
+        </div>
+
+        <div class="card" style="border-left:4px solid var(--amber)">
+          <h3>🐍 Usar <code>sys.executable</code> en todos los subprocesos</h3>
+          <p><b>Problema:</b> Correo, contabilidad y asignación llaman <code>"python3"</code> en lugar de <code>sys.executable</code>. Si el servidor corre dentro del venv, los subprocesos pueden usar otro Python sin las dependencias instaladas.</p>
+          <p style="margin-top:10px"><b>Solución:</b> Reemplazar <code>"python3"</code> por <code>sys.executable</code> en las llamadas a <code>subprocess.run/Popen</code> de <code>_run_correo_spider</code>, <code>_run_contabilidad_spider</code> y los de asignación.</p>
+          <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+            <span class="tag t-amber">Bug entorno</span><span class="tag t-green">Esfuerzo XS</span>
+          </div>
+          <pre style="margin-top:12px;font-size:.78rem"><span class="c"># Antes</span>
+result = subprocess.run(["python3", script], ...)
+<span class="c"># Después</span>
+result = subprocess.run([sys.executable, script], ...)</pre>
+        </div>
+
+        <div class="card" style="border-left:4px solid var(--amber)">
+          <h3>🔁 Doble upload en asignar Proships</h3>
+          <p><b>Problema:</b> <code>asignar_proships.py</code> llama <code>subir_archivo_create_order()</code> dos veces seguidas (líneas 436 y 438). La segunda carrera puede duplicar asignaciones reales en el sistema de MailAmericas.</p>
+          <p style="margin-top:10px"><b>Solución:</b> Eliminar la llamada duplicada. El éxito se detecta en la primera llamada con el texto "Successful assignments".</p>
+          <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+            <span class="tag t-amber">Bug lógico</span><span class="tag t-green">Esfuerzo XS</span>
+          </div>
+        </div>
+
+        <div class="card" style="border-left:4px solid var(--amber)">
+          <h3>⛔ Eliminar <code>input()</code> bloqueante en scripts de asignación</h3>
+          <p><b>Problema:</b> <code>asignar_proships.py</code> y <code>asignar_pasarex.py</code> terminan con <code>input("Presiona Enter...")</code>. Como subprocesos del servidor no tienen stdin — quedan colgados consumiendo el slot del watcher.</p>
+          <p style="margin-top:10px"><b>Solución:</b> Eliminar el <code>input()</code> del bloque <code>__main__</code>. El servidor ya mata/espera el proceso con <code>communicate()</code>.</p>
+          <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+            <span class="tag t-amber">Bug proceso</span><span class="tag t-green">Esfuerzo XS</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ======= MEDIO ======= -->
+      <h3 class="reveal" style="font-size:1.15rem;margin:0 0 14px;display:flex;align-items:center;gap:10px">
+        <span style="background:var(--brand-soft);color:var(--brand-ink);padding:4px 12px;border-radius:8px;font-size:.85rem;font-weight:700">🔵 MEDIO · Funcionalidad</span>
+      </h3>
+
+      <div class="grid g2 reveal d1" style="margin-bottom:32px">
+        <div class="card" style="border-left:4px solid var(--brand)">
+          <h3>💾 Persistir estado en disco</h3>
+          <p><b>Problema:</b> <code>SCRAPER_STATES</code> y <code>PASAREX_ASSIGN_STATE</code> viven en memoria. Reiniciar el servidor borra todos los resultados aunque los CSV sigan en disco.</p>
+          <p style="margin-top:10px"><b>Solución:</b> Al terminar cada scraper, serializar el estado a <code>.state.json</code> en la carpeta del proveedor y cargarlo al arrancar el servidor. Tres líneas extra en <code>_watch_pending_scraper</code>.</p>
+          <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+            <span class="tag t-blue">Resiliencia</span><span class="tag t-blue">Esfuerzo S</span>
+          </div>
+        </div>
+
+        <div class="card" style="border-left:4px solid var(--brand)">
+          <h3>📅 Periodo Telegram dinámico</h3>
+          <p><b>Problema:</b> El mensaje de contabilidad Telegram tiene hardcodeado <code>"Del 16 al 28 de febrero"</code>. Cada mes hay que editar el script manualmente o el mensajero recibe una fecha incorrecta.</p>
+          <p style="margin-top:10px"><b>Solución:</b> Calcular el rango del periodo desde las fechas reales de los paquetes procesados (min/max de <code>fecha</code> en los registros), o aceptar <code>PERIODO</code> como variable de entorno.</p>
+          <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+            <span class="tag t-blue">UX / correctitud</span><span class="tag t-green">Esfuerzo XS</span>
+          </div>
+        </div>
+
+        <div class="card" style="border-left:4px solid var(--brand)">
+          <h3>🚚 Implementar asignación iMile real</h3>
+          <p><b>Problema:</b> <code>asignar_imile.py</code> es un stub de 56 líneas que solo imprime <code>STATUS: OK</code>. El usuario cree que asigna pero no pasa nada.</p>
+          <p style="margin-top:10px"><b>Solución:</b> Implementar el flujo real contra <code>ds.imile.com</code> usando el mismo patrón del spider iMile (ya tiene login + navegación funcionando). El servidor ya tiene toda la infraestructura de watcher/polling lista.</p>
+          <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+            <span class="tag t-blue">Funcionalidad faltante</span><span class="tag t-amber">Esfuerzo M</span>
+          </div>
+        </div>
+
+        <div class="card" style="border-left:4px solid var(--brand)">
+          <h3>🐳 Docker funcional para scraping real</h3>
+          <p><b>Problema:</b> El <code>Dockerfile</code> no instala <code>chromedriver-autoinstaller</code>, <code>scrapy-playwright</code> ni <code>pandas</code>. No define <code>RUN_SPIDERS</code> ni un display para Chrome visible.</p>
+          <p style="margin-top:10px"><b>Solución:</b> Agregar las dependencias faltantes al <code>pip install</code>, instalar <code>xvfb</code> y usar un entrypoint que arranque <code>Xvfb :99</code> antes del servidor con <code>RUN_SPIDERS=1 DISPLAY=:99</code>.</p>
+          <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+            <span class="tag t-blue">Despliegue</span><span class="tag t-blue">Esfuerzo S</span>
+          </div>
+          <pre style="margin-top:12px;font-size:.78rem">RUN apt-get install -y xvfb
+RUN pip install chromedriver-autoinstaller \
+    scrapy-playwright pandas python-dotenv
+CMD ["sh","-c","Xvfb :99 -screen 0 1280x800x24 &amp; \
+  DISPLAY=:99 RUN_SPIDERS=1 python3 server.py"]</pre>
+        </div>
+
+        <div class="card" style="border-left:4px solid var(--brand)">
+          <h3>🗑️ Limpiar código muerto</h3>
+          <p><b>Problema:</b> Cada spider acumula funciones tras <code>return</code>/<code>finally</code> que nunca se ejecutan (lógica WhatsApp duplicada, normalizadores sin llamar, endpoints de <code>app.js</code> que apuntan a rutas inexistentes).</p>
+          <p style="margin-top:10px"><b>Solución:</b> Auditoría rápida con cobertura de código (<code>coverage run</code> en un test de humo) o simplemente revisar las funciones reportadas aquí y borrarlas. Reducción de ~15-20% de líneas.</p>
+          <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+            <span class="tag t-blue">Mantenibilidad</span><span class="tag t-blue">Esfuerzo S</span>
+          </div>
+        </div>
+
+        <div class="card" style="border-left:4px solid var(--brand)">
+          <h3>📄 Excel de pendientes real (.xlsx)</h3>
+          <p><b>Problema:</b> El endpoint <code>/download.xlsx</code> sirve una tabla HTML con MIME de Excel. En Excel moderno abre con advertencia; en versiones recientes directamente rechaza el archivo.</p>
+          <p style="margin-top:10px"><b>Solución:</b> Usar <code>openpyxl</code> (ya está instalado) para generar un <code>.xlsx</code> real en <code>_build_excel_html</code>. Cinco líneas de cambio.</p>
+          <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+            <span class="tag t-blue">UX</span><span class="tag t-green">Esfuerzo XS</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ======= NICE-TO-HAVE ======= -->
+      <h3 class="reveal" style="font-size:1.15rem;margin:0 0 14px;display:flex;align-items:center;gap:10px">
+        <span style="background:var(--green-soft);color:var(--green);padding:4px 12px;border-radius:8px;font-size:.85rem;font-weight:700">🟢 NICE-TO-HAVE · Performance y DX</span>
+      </h3>
+
+      <div class="grid g3 reveal d1" style="margin-bottom:32px">
+        <div class="card">
+          <h3>⚡ Correo SAC: guardar Excel una sola vez</h3>
+          <p><code>proships_spider.py</code> hace <code>load_workbook + save</code> en cada fila → O(n) lecturas/escrituras completas. Con 50 guías = 50 cargas del archivo.</p>
+          <p style="margin-top:8px"><b>Fix:</b> Abrir una vez, escribir todas las filas, guardar al final.</p>
+          <div style="margin-top:10px"><span class="tag t-green">Esfuerzo XS</span><span class="tag t-green">Rendimiento</span></div>
+        </div>
+
+        <div class="card">
+          <h3>📡 Logs en tiempo real al frontend</h3>
+          <p>Los scrapers imprimen emoji/status al stdout pero el frontend solo ve el estado final. Con <b>Server-Sent Events</b> (SSE) se pueden hacer llegar los prints en vivo.</p>
+          <p style="margin-top:8px"><b>Fix:</b> Un endpoint <code>/api/pending/&lt;prov&gt;/logs</code> que lea stdout línea a línea desde el proceso hijo vía SSE.</p>
+          <div style="margin-top:10px"><span class="tag t-blue">Esfuerzo M</span><span class="tag t-blue">UX</span></div>
+        </div>
+
+        <div class="card">
+          <h3>🧪 Test de humo automatizado</h3>
+          <p>No hay tests. Un test de humo básico con <code>RUN_SPIDERS=0</code> y datos falsos verificaría que los endpoints responden, el parseo de CSV funciona y la UI carga.</p>
+          <p style="margin-top:8px"><b>Fix:</b> <code>pytest</code> + <code>requests</code> contra el servidor levantado en <code>:8003</code> en CI.</p>
+          <div style="margin-top:10px"><span class="tag t-blue">Esfuerzo S</span><span class="tag t-green">Calidad</span></div>
+        </div>
+
+        <div class="card">
+          <h3>🗺️ Municipio en proships / iMile</h3>
+          <p>La columna 8 (<code>municipio</code>) del CSV siempre está vacía en proships e iMile, pero PackTrack sí tiene esa información disponible en la página de paquete.</p>
+          <p style="margin-top:8px"><b>Fix:</b> Agregar <code>ciudad</code>/<code>municipio</code> al mapeo de cabeceras en <code>paquetes_buscar_y_extraer</code>.</p>
+          <div style="margin-top:10px"><span class="tag t-green">Esfuerzo XS</span><span class="tag t-blue">Datos</span></div>
+        </div>
+
+        <div class="card">
+          <h3>📱 Estimación de tiempo en UI</h3>
+          <p>El usuario no sabe cuánto va a tardar un lote. Con ~1s por guía + login ~10s, el tiempo es predecible. Mostrarlo en la UI reduce ansiedad y refreshes manuales.</p>
+          <p style="margin-top:8px"><b>Fix:</b> Calcular <code>N * 1.5s + 12s</code> al enviar el formulario y mostrar countdown.</p>
+          <div style="margin-top:10px"><span class="tag t-green">Esfuerzo XS</span><span class="tag t-green">UX</span></div>
+        </div>
+
+        <div class="card">
+          <h3>🔁 Reintentos automáticos en selectores frágiles</h3>
+          <p>Los selectores CSS/XPath se rompen cuando WhatsApp o los portales cambian su DOM. Un mecanismo de retry con múltiples selectores alternativos haría el sistema más resiliente.</p>
+          <p style="margin-top:8px"><b>Fix:</b> Centralizar en un <code>try_selectors(driver, [s1,s2,s3])</code> helper reutilizable.</p>
+          <div style="margin-top:10px"><span class="tag t-blue">Esfuerzo S</span><span class="tag t-green">Resiliencia</span></div>
+        </div>
+      </div>
+
+      <!-- MATRIX -->
+      <div class="card reveal d2" style="background:var(--surface2)">
+        <h3 style="margin:0 0 18px">📊 Resumen prioridad / esfuerzo</h3>
+        <div class="tw">
+          <table class="data">
+            <thead><tr><th>Mejora</th><th>Prioridad</th><th>Esfuerzo</th><th>Afecta</th></tr></thead>
+            <tbody>
+              <tr><td>Sacar credenciales del código</td><td><span class="tag t-red">Crítico</span></td><td><span class="tag t-green">XS</span></td><td>Todos los scripts</td></tr>
+              <tr><td>Ruta Chrome Windows → env var</td><td><span class="tag t-red">Crítico</span></td><td><span class="tag t-green">XS</span></td><td>asignar_pasarex · spider_pasarex</td></tr>
+              <tr><td>Arreglar <code>/api/process</code> (NameError)</td><td><span class="tag t-amber">Alto</span></td><td><span class="tag t-green">XS</span></td><td>server.py</td></tr>
+              <tr><td><code>sys.executable</code> en todos los subprocesos</td><td><span class="tag t-amber">Alto</span></td><td><span class="tag t-green">XS</span></td><td>server.py</td></tr>
+              <tr><td>Eliminar doble upload en asignar Proships</td><td><span class="tag t-amber">Alto</span></td><td><span class="tag t-green">XS</span></td><td>asignar_proships.py</td></tr>
+              <tr><td>Eliminar <code>input()</code> bloqueante</td><td><span class="tag t-amber">Alto</span></td><td><span class="tag t-green">XS</span></td><td>asignar_*.py</td></tr>
+              <tr><td>Persistir estado en disco (JSON)</td><td><span class="tag t-blue">Medio</span></td><td><span class="tag t-blue">S</span></td><td>server.py</td></tr>
+              <tr><td>Periodo Telegram dinámico</td><td><span class="tag t-blue">Medio</span></td><td><span class="tag t-green">XS</span></td><td>contabilidad_spider_con_telegram_v3</td></tr>
+              <tr><td>Implementar asignación iMile real</td><td><span class="tag t-blue">Medio</span></td><td><span class="tag t-amber">M</span></td><td>asignar_imile.py · server.py</td></tr>
+              <tr><td>Docker con Xvfb + deps completas</td><td><span class="tag t-blue">Medio</span></td><td><span class="tag t-blue">S</span></td><td>Dockerfile</td></tr>
+              <tr><td>Excel real en /download.xlsx</td><td><span class="tag t-blue">Medio</span></td><td><span class="tag t-green">XS</span></td><td>server.py</td></tr>
+              <tr><td>Limpiar código muerto</td><td><span class="tag t-blue">Medio</span></td><td><span class="tag t-blue">S</span></td><td>todos los spiders</td></tr>
+              <tr><td>Correo SAC: un solo save al final</td><td><span class="tag t-green">Nice</span></td><td><span class="tag t-green">XS</span></td><td>proships_spider.py</td></tr>
+              <tr><td>Municipio en proships / iMile</td><td><span class="tag t-green">Nice</span></td><td><span class="tag t-green">XS</span></td><td>spiders proships · imile</td></tr>
+              <tr><td>Logs en tiempo real (SSE)</td><td><span class="tag t-green">Nice</span></td><td><span class="tag t-blue">M</span></td><td>server.py · app.js</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="note ok reveal d3" style="margin-top:24px">
+        <span class="ni">🚀</span>
+        <div>Las 6 mejoras marcadas <b>XS de alta/crítica prioridad</b> se pueden hacer en una mañana y eliminarían los bugs más gordos del sistema. Las dos críticas de seguridad (credenciales + ruta Windows) son las únicas que no deberían esperar.</div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<footer>
+  Generado a partir de la lectura directa del código de <b>Scraper Timex</b> · Documentación técnica · sin adornos que no estén en el repo.
+</footer>
+
+<script>
+  /* progress bar */
+  const prog=document.getElementById('progress');
+  const onScroll=()=>{const h=document.documentElement;const sc=h.scrollTop;const max=h.scrollHeight-h.clientHeight;
+    prog.style.width=(max>0?(sc/max*100):0)+'%';};
+  document.addEventListener('scroll',onScroll,{passive:true});onScroll();
+
+  /* reveal on scroll */
+  const io=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');io.unobserve(e.target);}});},{threshold:.12});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+  /* count up */
+  const countUp=(el)=>{const t=+el.dataset.count;let n=0;const step=Math.max(1,Math.ceil(t/30));
+    const tick=()=>{n+=step;if(n>=t){el.textContent=t;}else{el.textContent=n;requestAnimationFrame(tick);}};tick();};
+  const cio=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){countUp(e.target);cio.unobserve(e.target);}});},{threshold:.6});
+  document.querySelectorAll('[data-count]').forEach(el=>cio.observe(el));
+
+  /* tabs */
+  document.querySelectorAll('.tab').forEach(tab=>{tab.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    tab.classList.add('active');document.getElementById(tab.dataset.tab).classList.add('active');});});
+
+  /* TOC scroll-spy */
+  const links=[...document.querySelectorAll('.toc a')];
+  const secs=links.map(a=>document.querySelector(a.getAttribute('href')));
+  const spy=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){
+    const id='#'+e.target.id;links.forEach(a=>a.classList.toggle('active',a.getAttribute('href')===id));}});},
+    {rootMargin:'-20% 0px -70% 0px'});
+  secs.forEach(s=>s&&spy.observe(s));
+
+  /* theme */
+  const btn=document.getElementById('themeBtn');const root=document.documentElement;
+  const saved=localStorage.getItem('timex-theme');
+  if(saved==='dark'){root.setAttribute('data-theme','dark');btn.textContent='☀️';}
+  btn.addEventListener('click',()=>{const dark=root.getAttribute('data-theme')==='dark';
+    if(dark){root.removeAttribute('data-theme');btn.textContent='🌙';localStorage.setItem('timex-theme','light');}
+    else{root.setAttribute('data-theme','dark');btn.textContent='☀️';localStorage.setItem('timex-theme','dark');}});
+</script>
+</body>
+</html>

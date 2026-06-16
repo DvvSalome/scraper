@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Contabilidad</title>
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body>
+    <nav class="main-nav">
+      <ul>
+        <li><a href="/">Pendientes</a></li>
+        <li><a href="/correo/">Correo</a></li>
+        <li><a href="/pasarex_asignar/">Asignación</a></li>
+        <li><a href="/contabilidad/" aria-current="page">Contabilidad</a></li>
+      </ul>
+    </nav>
+
+    <main class="container">
+      <header class="header">
+        <h1>Contabilidad</h1>
+        <p>Ingresa los paquetes para generar el consolidado por mensajero.</p>
+      </header>
+
+      <section class="card compact">
+        <form id="contabilidad-form">
+          <label class="field">
+            <span>Empresa</span>
+            <select id="contabilidad-provider" name="contabilidad-provider" required>
+              <option value="x-cargo">X Cargo</option>
+              <option value="proships">Proships</option>
+              <option value="pasarex" disabled>Pasarex</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Paquetes</span>
+            <textarea id="contabilidad-packages" name="contabilidad-packages" placeholder="Una guía por línea o separadas por coma" required></textarea>
+          </label>
+
+          <label class="field" for="contabilidad-send-telegram">
+            <span>
+              <input type="checkbox" id="contabilidad-send-telegram" name="contabilidad-send-telegram" />
+              Enviar resumen por Telegram
+            </span>
+          </label>
+
+          <div class="actions">
+            <button type="submit" class="primary" id="contabilidad-procesar">Procesar contabilidad</button>
+          </div>
+
+          <div class="status">
+            <span class="status-label">Estado:</span>
+            <span id="contabilidad-status-text">En espera</span>
+          </div>
+
+          <div class="table-wrapper">
+            <table>
+              <thead id="contabilidad-results-head"></thead>
+              <tbody id="contabilidad-results-body">
+                <tr>
+                  <td colspan="6" class="empty">Sin resultados aún.</td>
+                </tr>
+              </tbody>
+              <tfoot id="contabilidad-results-foot"></tfoot>
+            </table>
+          </div>
+            <div class="field">
+            <span>Guías sin asignar</span>
+            <p id="contabilidad-unassigned-guides" class="empty">Sin guías sin asignar.</p>
+          </div>
+        </form>
+      </section>
+    </main>
+
+    <script src="contabilidad.js"></script>
+  </body>
+</html>

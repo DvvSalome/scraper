@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Correo - Novedades SAC</title>
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body>
+    <nav class="main-nav">
+      <ul>
+        <li><a href="/">Pendientes</a></li>
+        <li><a href="/correo/" aria-current="page">Correo</a></li>
+        <li><a href="/pasarex_asignar/">Asignación</a></li>
+         <li><a href="/contabilidad/">Contabilidad</a></li>
+      </ul>
+    </nav>
+
+    <main class="container">
+      <header class="header">
+        <h1>Correo · Novedades SAC</h1>
+        <p>Ingresa los códigos para generar el Excel de novedades.</p>
+      </header>
+
+      <section class="card compact">
+        <form id="correo-form">
+          <label class="field">
+            <span>Códigos</span>
+            <textarea
+              id="codes"
+              name="codes"
+              placeholder="Ej: SAC123, SAC456"
+              required
+            ></textarea>
+          </label>
+
+          <div class="actions">
+            <button type="submit" class="primary">Generar Excel</button>
+            <button type="button" id="download-excel" class="secondary">
+              Descargar Excel
+            </button>
+          </div>
+
+          <div class="status">
+            <span class="status-label">Estado:</span>
+            <span id="status-text">En espera</span>
+          </div>
+        </form>
+      </section>
+    </main>
+
+    <script src="correo.js"></script>
+  </body>
+</html>
