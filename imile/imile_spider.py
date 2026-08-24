@@ -20,7 +20,7 @@ BASE_URL = "https://ds.imile.com"
 LOGIN_URL = "https://ds-login.imile.com/"
 IMILE_WAYBILL_URL = BASE_URL + "/#/DSOperation/WaybillManagement/dsTrackQuery?waybillNo={}"
 IMILE_EMAIL = os.getenv("IMILE_EMAIL", "2106639001")
-IMILE_PASSWORD = os.getenv("IMILE_PASSWORD", "Mile123456")
+IMILE_PASSWORD = os.getenv("IMILE_PASSWORD", "Mile.2026")
 SEARCH_INPUT = (By.CSS_SELECTOR, ".search-header input")
 RESULTS_CSV = Path("resultados.csv")
 MENSAJES_OUT_CSV = Path("mensajes_whatsapp.csv")
@@ -537,6 +537,33 @@ def _wa_click_continue_button(driver):
     return False
 
 
+class WhatsAppNumeroInvalido(Exception):
+    """El número no está en WhatsApp o la URL /send es inválida."""
+    pass
+
+
+def _wa_numero_invalido(driver) -> bool:
+    """Detecta el popup de 'número inválido / no está en WhatsApp'."""
+    frases = [
+        "no es válido", "not valid", "isn't on whatsapp", "is not on whatsapp",
+        "no está en whatsapp", "phone number shared via url is invalid",
+        "url que compartiste no es válid", "número de teléfono compartido",
+    ]
+    try:
+        for xp in ("//div[@role='dialog']", "//*[@data-animate-modal-body='true']"):
+            for el in driver.find_elements(By.XPATH, xp):
+                try:
+                    if el.is_displayed():
+                        t = (el.text or "").lower()
+                        if any(f in t for f in frases):
+                            return True
+                except Exception:
+                    pass
+    except Exception:
+        pass
+    return False
+
+
 def wa_esperar_caja_mensaje(driver, timeout=45):
     selectores = [
         # WhatsApp Web 2024/2025 selectors
@@ -562,6 +589,10 @@ def wa_esperar_caja_mensaje(driver, timeout=45):
             if _wa_click_continue_button(driver):
                 continue_clicked = True
 
+        # Si el número no está en WhatsApp, cortar rápido (no esperar todo el timeout)
+        if _wa_numero_invalido(driver):
+            raise WhatsAppNumeroInvalido("el número no está en WhatsApp / URL inválida")
+
         for sel in selectores:
             try:
                 elementos = driver.find_elements(By.CSS_SELECTOR, sel)
@@ -573,6 +604,50 @@ def wa_esperar_caja_mensaje(driver, timeout=45):
         time.sleep(0.4)
 
     raise Exception(f"No apareció la caja de mensaje. Último error: {ultimo_error}")
+
+
+def _wa_contar_mensajes(driver) -> int:
+    """Cuenta burbujas de mensaje (selector robusto a versiones de WhatsApp Web)."""
+    try:
+        return len(driver.find_elements(By.CSS_SELECTOR, "[data-testid='msg-container'], div.message-out"))
+    except Exception:
+        return 0
+
+
+def _wa_confirmar_envio(driver, caja, antes: int, timeout: float) -> bool:
+    """Enviado si aparece una burbuja nueva O si la caja quedó vacía tras el ENTER."""
+    end = time.time() + timeout
+    while time.time() < end:
+        if _wa_contar_mensajes(driver) > antes:
+            return True
+        try:
+            if not (caja.text or "").strip():
+                return True          # la caja tenía texto y se vació => se envió
+        except Exception:
+            return True              # la caja se re-renderizó => se envió
+        time.sleep(0.25)
+    return False
+
+
+def _wa_enviar_uno(driver, phone: str, text: str) -> bool:
+    """Abre el chat y envía un mensaje. Lanza WhatsAppNumeroInvalido si el número no está en WhatsApp."""
+    url = f"https://web.whatsapp.com/send?phone={phone}&text={urllib.parse.quote(text)}"
+    driver.get(url)
+
+    caja = wa_esperar_caja_mensaje(driver, timeout=WHATSAPP_CHAT_READY_SEC)
+    try:
+        caja.click()
+    except Exception:
+        pass
+    try:
+        if not (caja.text or "").strip():
+            caja.send_keys(text)
+    except Exception:
+        pass
+
+    antes = _wa_contar_mensajes(driver)
+    caja.send_keys(Keys.ENTER)
+    return _wa_confirmar_envio(driver, caja, antes, WHATSAPP_CHAT_READY_SEC)
 
 
 def send_whatsapp_messages(mensajes):
@@ -588,6 +663,7 @@ def send_whatsapp_messages(mensajes):
         print("✅ Sesión WhatsApp activa (se guarda en el perfil).")
 
         enviados = set()
+        fallidos = []
 
         for m in mensajes:
             phone = _wa_normalize_phone((m.get("celular") or "").strip())
@@ -595,60 +671,29 @@ def send_whatsapp_messages(mensajes):
             if not phone or not text or phone in enviados:
                 continue
 
-            url = f"https://web.whatsapp.com/send?phone={phone}&text={urllib.parse.quote(text)}"
-            driver.get(url)
-
-            caja = wa_esperar_caja_mensaje(driver, timeout=WHATSAPP_CHAT_READY_SEC)
+            # Aislar cada envío: un fallo NO debe abortar el resto del lote.
             try:
-                caja.click()
-            except Exception:
-                pass
-
-            try:
-                current = (caja.text or "").strip()
-                if not current:
-                    caja.send_keys(text)
-            except Exception:
-                pass
-
-            before_count = len(driver.find_elements(By.CSS_SELECTOR, "div.message-out"))
-            caja.send_keys(Keys.ENTER)
-
-            end_send = time.time() + WHATSAPP_CHAT_READY_SEC
-            sent_created = False
-            while time.time() < end_send:
-                now_count = len(driver.find_elements(By.CSS_SELECTOR, "div.message-out"))
-                if now_count > before_count:
-                    sent_created = True
-                    break
-                time.sleep(0.25)
-
-            if not sent_created:
-                print(f"⚠️ No vi salir el mensaje (message-out) -> {phone}")
-                try:
-                    caja.send_keys(Keys.ENTER)
-                except Exception:
-                    pass
-                end_send2 = time.time() + 10
-                while time.time() < end_send2:
-                    now_count = len(driver.find_elements(By.CSS_SELECTOR, "div.message-out"))
-                    if now_count > before_count:
-                        sent_created = True
-                        break
-                    time.sleep(0.25)
-
-            if not sent_created:
-                print(f"❌ No se pudo confirmar envío -> {phone}")
+                ok = _wa_enviar_uno(driver, phone, text)
+            except WhatsAppNumeroInvalido:
+                print(f"⛔ No está en WhatsApp, se omite -> {phone}")
+                fallidos.append(phone)
+                continue
+            except Exception as e:
+                print(f"⚠️ Error enviando a {phone}, se omite: {e}")
+                fallidos.append(phone)
                 continue
 
-            ok = wa_wait_two_ticks(driver, timeout=WHATSAPP_WAIT_TICKS_SEC)
             if ok:
-                print(f"✅ Entregado (2 chulos) -> {phone}")
+                enviados.add(phone)
+                print(f"✅ Enviado -> {phone}")
             else:
-                print(f"⚠️ No confirmé 2 chulos -> {phone}")
-
-            enviados.add(phone)
+                fallidos.append(phone)
+                print(f"❌ No se pudo confirmar envío -> {phone}")
             time.sleep(1.2)
+
+        print(f"📊 WhatsApp: {len(enviados)} enviados, {len(fallidos)} fallidos de {len(mensajes)}.")
+        if fallidos:
+            print("   Fallidos:", ", ".join(fallidos))
 
     finally:
         try:
